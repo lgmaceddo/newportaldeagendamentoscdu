@@ -1,73 +1,145 @@
-# Welcome to your Lovable project
+# Portal de Agendamento CDU
 
-## Project info
+Sistema de gerenciamento para a equipe de agendamento do Centro de Diagnóstico Unimed.
 
-**URL**: https://lovable.dev/projects/8ca881df-962e-4d10-b1c3-8eae6dd943d4
+## 🚀 Deploy na Vercel
 
-## How can I edit this code?
+### Pré-requisitos
 
-There are several ways of editing your application.
+1. Conta na [Vercel](https://vercel.com)
+2. Projeto Supabase configurado
+3. Repositório Git (GitHub, GitLab ou Bitbucket)
 
-**Use Lovable**
+### Passos para Deploy
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8ca881df-962e-4d10-b1c3-8eae6dd943d4) and start prompting.
+#### 1. Instalar Vercel CLI (Opcional)
 
-Changes made via Lovable will be committed automatically to this repo.
+```bash
+npm install -g vercel
+```
 
-**Use your preferred IDE**
+#### 2. Deploy via Vercel Dashboard (Recomendado)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Acesse [vercel.com](https://vercel.com)
+2. Clique em "Add New Project"
+3. Importe seu repositório do GitHub
+4. Configure as variáveis de ambiente:
+   - `VITE_SUPABASE_PROJECT_ID`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - `VITE_SUPABASE_URL`
+5. Clique em "Deploy"
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+#### 3. Deploy via CLI
 
-Follow these steps:
+```bash
+# Login na Vercel
+vercel login
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Deploy
+vercel
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Deploy para produção
+vercel --prod
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Configurar Variáveis de Ambiente na Vercel
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+1. Acesse seu projeto na Vercel
+2. Vá em **Settings** → **Environment Variables**
+3. Adicione as seguintes variáveis:
+
+| Nome | Valor | Ambiente |
+|------|-------|----------|
+| `VITE_SUPABASE_PROJECT_ID` | Seu Project ID | Production, Preview, Development |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Sua Publishable Key | Production, Preview, Development |
+| `VITE_SUPABASE_URL` | https://seu-projeto.supabase.co | Production, Preview, Development |
+
+### 📝 Variáveis de Ambiente
+
+Copie o arquivo `.env.example` para `.env.local` e preencha com suas credenciais:
+
+```bash
+cp .env.example .env.local
+```
+
+Edite `.env.local` com suas credenciais do Supabase:
+
+```env
+VITE_SUPABASE_PROJECT_ID=mxbejtzeakbfsqzdnbag
+VITE_SUPABASE_PUBLISHABLE_KEY=sua_publishable_key_aqui
+VITE_SUPABASE_URL=https://mxbejtzeakbfsqzdnbag.supabase.co
+```
+
+## 🛠️ Desenvolvimento Local
+
+### Instalar Dependências
+
+```bash
+npm install
+```
+
+### Executar em Desenvolvimento
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Build para Produção
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run build
+```
 
-**Use GitHub Codespaces**
+### Preview da Build
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+npm run preview
+```
 
-## What technologies are used for this project?
+## 📦 Tecnologias
 
-This project is built with:
+- **React** + **TypeScript**
+- **Vite** - Build tool
+- **Supabase** - Backend e autenticação
+- **Tailwind CSS** - Estilização
+- **Shadcn UI** - Componentes
+- **React Router** - Navegação
+- **Zod** - Validação
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 🔐 Autenticação
 
-## How can I deploy this project?
+O sistema usa Supabase Auth com:
+- Login/Cadastro com email e senha
+- Recuperação de senha
+- Sistema de roles (admin/user)
+- Row Level Security (RLS)
 
-Simply open [Lovable](https://lovable.dev/projects/8ca881df-962e-4d10-b1c3-8eae6dd943d4) and click on Share -> Publish.
+## 📊 Banco de Dados
 
-## Can I connect a custom domain to my Lovable project?
+Todas as tabelas estão configuradas no Supabase com:
+- 18 tabelas principais
+- RLS habilitado
+- Triggers automáticos
+- Migrações versionadas
 
-Yes, you can!
+## 🎨 Funcionalidades
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- ✅ Dashboard com métricas
+- ✅ Gestão de Scripts
+- ✅ Gestão de Exames
+- ✅ Gestão de Contatos
+- ✅ Tabela de Valores
+- ✅ Consultórios
+- ✅ Profissionais
+- ✅ Anotações e Estomaterapia
+- ✅ Recados
+- ✅ Sistema de busca global
+- ✅ Migração de dados via JSON
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📄 Licença
+
+© 2026 Unimed Bauru - Centro de Diagnóstico
+
+---
+
+**Desenvolvido para a Equipe de Agendamento CDU** 💚
