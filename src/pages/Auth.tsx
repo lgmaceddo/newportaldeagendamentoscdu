@@ -6,14 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import unimedLogo from '@/assets/unimed-bauru-logo-edited.png';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp, user, loading: authLoading, updatePassword, resetPassword } = useAuth();
   const { toast } = useToast();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,7 +28,7 @@ const Auth: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const type = params.get('type');
-    
+
     if (type === 'recovery') {
       setActiveView('update');
     }
@@ -172,18 +171,11 @@ const Auth: React.FC = () => {
       {/* Decorative circles */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl" />
-      
+
       <div className="w-full max-w-md relative z-10">
-        {/* Logo and Title */}
+        {/* Title */}
         <div className="text-center mb-8">
-          <div className="inline-block bg-white/10 backdrop-blur-sm p-4 rounded-2xl mb-4">
-            <img
-              src={unimedLogo}
-              alt="Unimed Bauru CDU"
-              className="h-16 w-auto object-contain"
-            />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Portal CDU</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">EQUIPE DE AGENDAMENTO CDU</h1>
           <p className="text-white/80 text-sm">Centro de Diagnóstico Unimed</p>
         </div>
 
@@ -238,9 +230,9 @@ const Auth: React.FC = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-base font-semibold" 
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
                 style={{ backgroundColor: '#10605B' }}
                 disabled={loading}
               >
@@ -373,9 +365,9 @@ const Auth: React.FC = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-base font-semibold" 
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
                 style={{ backgroundColor: '#10605B' }}
                 disabled={loading}
               >
@@ -425,9 +417,9 @@ const Auth: React.FC = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-base font-semibold" 
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
                 style={{ backgroundColor: '#10605B' }}
                 disabled={loading}
               >
@@ -500,9 +492,9 @@ const Auth: React.FC = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-base font-semibold" 
+              <Button
+                type="submit"
+                className="w-full h-12 text-base font-semibold"
                 style={{ backgroundColor: '#10605B' }}
                 disabled={loading}
               >
