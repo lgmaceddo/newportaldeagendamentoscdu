@@ -1,0 +1,414 @@
+import { useState, useEffect, useMemo } from "react";
+import { Plus, Settings, Edit, Trash2, Copy, Save, X, MessageCircle, Eye, Users, FileText, Folder, Zap, ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { RecadoCategory, RecadoItem } from "@/types/data";
+import { RecadoCategoryModal } from "@/components/modals/RecadoCategoryModal";
+import { RecadoItemModal } from "@/components/modals/RecadoItemModal";
+import { RecadoGeneratorModal } from "@/components/modals/RecadoGeneratorModal";
+import { useData } from "@/contexts/DataContext";
+import { useToast } from "@/hooks/use-toast";
+import { RecadoCategoryFormData, RecadoItemFormData } from "@/schemas/recadoSchema";
+import { useUserRoleContext } from "@/contexts/UserRoleContext";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { SortableList, SortableItem } from "@/components/SortableList";
+import { useLocation } from "react-router-dom";
+
+interface RecadosContentProps {
+  categories: RecadoCategory[];
+  data: Record<string, RecadoItem[]>;
+}
+
+// Mapeamento de ícones para categorias (apenas para dar um toque visual)
+const getCategoryIcon = (categoryTitle: string) => {
+    const lowerTitle = categoryTitle.toLowerCase();
+    if (lowerTitle.includes('autorização') || lowerTitle.includes('guia')) return ClipboardList;
+    if (lowerTitle.includes('imagem') || lowerTitle.includes('exame')) return Zap;
+    return Folder;
+};
+
+export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
+  const location = useLocation();
+  const { canEdit } = useUserRoleContext();
+  const canEditRecados = canEdit('recados');
+  const [activeCategory, setActiveCategory] = useState(categories[0]?.id || "");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [generatorModalOpen, setGeneratorModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<(RecadoItem & { categoryId: string }) | undefined>();
+  const [editingCategory, setEditingCategory] = useState<RecadoCategory | undefined>();
+  const [selectedItem, setSelectedItem] = useState<{ item: RecadoItem, category: RecadoCategory } | null>(null);
+  const { recadoCategories, addRecadoCategory, updateRecadoCategory, deleteRecadoCategory, reorderRecadoCategories, addRecadoItem, updateRecadoItem, deleteRecadoItem, hasUnsavedChanges, saveToLocalStorage } = useData();
+  const { toast } = useToast();
+
+  // Check for search result in location state
+  useEffect(() => {
+    if (location.state?.searchResult?.type === 'recado') {
+      const categoryId = location.state.searchResult.categoryId;
+      const itemId = location.state.searchResult.itemId;
+      
+      // Set the correct category
+      if (categoryId) {
+        setActiveCategory(categoryId);
+      }
+      
+      // Find and generate the specific recado
+      const categoryItems = data[categoryId] || [];
+      const item = categoryItems.find(i => i.id === itemId);
+      const category = categories.find(c => c.id === categoryId);
+      
+      if (item && category) {
+        setSelectedItem({ item, category });
+        setGeneratorModalOpen(true);
+        
+        // Clear the location state to prevent re-triggering
+        window.history.replaceState({}, document.title, location.pathname);
+      }
+    }
+  }, [location.state, data, categories]);
+
+  // Ordena as categorias por título (apenas para inicialização, a reordenação manual prevalece)
+  const sortedCategories = useMemo(() => [...categories], [categories]);
+
+  // Update activeCategory when categories change
+  useEffect(() => {
+    if (sortedCategories.length > 0 && (!activeCategory || !sortedCategories.find(cat => cat.id === activeCategory))) {
+      setActiveCategory(sortedCategories[0].id);
+    }
+  }, [sortedCategories, activeCategory]);
+
+  // Consolida todos os itens para a busca
+  const allItems: (RecadoItem & { categoryId: string, category: RecadoCategory })[] = sortedCategories.flatMap(cat => (data[cat.id] || []).map(item => ({ ...item, categoryId: cat.id, category: cat })) );
+  const filteredItems = allItems
+    .filter((item) =>
+      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.category.title.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+
+  // Itens a serem exibidos (filtrados se houver busca, ou apenas da categoria ativa)
+  const itemsToDisplay = searchTerm
+    ? filteredItems
+    : (data[activeCategory] || []).map(item => ({ ...item, categoryId: activeCategory, category: sortedCategories.find(c => c.id === activeCategory)! }))
+      .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+
+  // --- Category Handlers ---
+  const handleSaveCategory = (formData: Omit<RecadoCategory, "id"> | RecadoCategory) => {
+    if ('id' in formData) {
+      updateRecadoCategory(formData);
+      toast({ title: "Sucesso!", description: "Categoria atualizada com sucesso." });
+    } else {
+      addRecadoCategory(formData);
+      toast({ title: "Sucesso!", description: "Categoria criada com sucesso." });
+    }
+    setEditingCategory(undefined);
+  };
+
+  const handleEditCategory = (category: RecadoCategory) => {
+    setEditingCategory(category);
+    setCategoryModalOpen(true);
+  };
+
+  const handleDeleteCategory = (categoryId: string) => {
+    if (confirm("Tem certeza que deseja excluir esta categoria e todos os recados associados?")) {
+      deleteRecadoCategory(categoryId);
+      toast({ title: "Sucesso!", description: "Categoria excluída." });
+    }
+  };
+
+  const handleReorderCategories = (oldIndex: number, newIndex: number) => {
+    reorderRecadoCategories(oldIndex, newIndex);
+    // Atualiza a categoria ativa para a nova posição, se necessário
+    const newActiveCategory = categories[newIndex]?.id;
+    if (newActiveCategory) {
+      setActiveCategory(newActiveCategory);
+    }
+  };
+
+  // --- Item Handlers ---
+  const handleSaveItem = (formData: RecadoItemFormData) => {
+    if (editingItem) {
+      // Se mudou de categoria, precisa remover da antiga e adicionar na nova
+      if (editingItem.categoryId !== formData.categoryId) {
+        deleteRecadoItem(editingItem.categoryId, editingItem.id);
+        addRecadoItem(formData.categoryId, {
+          title: formData.title,
+          content: formData.content,
+          fields: formData.fields,
+        });
+      } else {
+        // Mesma categoria, apenas atualiza
+        updateRecadoItem(formData.categoryId, editingItem.id, {
+          title: formData.title,
+          content: formData.content,
+          fields: formData.fields,
+        });
+      }
+    } else {
+      addRecadoItem(formData.categoryId, {
+        title: formData.title,
+        content: formData.content,
+        fields: formData.fields,
+      });
+    }
+    setEditingItem(undefined);
+    setItemModalOpen(false);
+  };
+
+  const handleEditItem = (item: RecadoItem, categoryId: string) => {
+    setEditingItem({ ...item, categoryId });
+    setItemModalOpen(true);
+  };
+
+  const handleDeleteItem = (itemId: string, categoryId: string) => {
+    if (confirm("Tem certeza que deseja excluir este item de recado?")) {
+      deleteRecadoItem(categoryId, itemId);
+      toast({ title: "Sucesso!", description: "Item excluído com sucesso." });
+    }
+  };
+
+  const handleGenerateRecado = (item: RecadoItem, category: RecadoCategory) => {
+    setSelectedItem({ item, category });
+    setGeneratorModalOpen(true);
+  };
+
+  // Função para editar a categoria a partir do modal de geração
+  const handleEditCategoryFromGenerator = (category: RecadoCategory) => {
+    setEditingCategory(category);
+    setCategoryModalOpen(true);
+  };
+
+  const handleCloseItemModal = () => {
+    setItemModalOpen(false);
+    setEditingItem(undefined);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setCategoryModalOpen(false);
+    setEditingCategory(undefined);
+  };
+
+  const renderRecadoItem = (item: RecadoItem & { categoryId: string, category: RecadoCategory }) => {
+    // Icon removido
+    
+    return (
+      <Card
+        key={item.id}
+        // Removendo min-h para compactar o card
+        className="relative overflow-hidden flex flex-col h-full cursor-pointer group transition-all duration-300 border-2 border-border/50 hover:shadow-xl hover:border-primary/50"
+        onClick={() => handleGenerateRecado(item, item.category)}
+      >
+        <CardContent className="p-0 flex flex-col h-full">
+          {/* Header Section - Título simplificado (igual ao script) */}
+          <div className="p-3 flex-shrink-0 flex items-center justify-between min-h-[56px] bg-primary/5 border-b border-border/50">
+            <h3 className="font-bold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors flex items-center gap-2">
+              {/* Ícone removido aqui */}
+              <span>{item.title}</span>
+            </h3>
+          </div>
+          
+          {/* Corpo do Card: REMOVIDO para compactar */}
+          
+          {/* Footer Actions */}
+          <div className="px-3 py-2 bg-muted/20 border-t flex justify-end items-center gap-2 mt-auto flex-shrink-0">
+            {canEditRecados && (
+              <>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditItem(item, item.categoryId);
+                  }}
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  title="Editar"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteItem(item.id, item.categoryId);
+                  }}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="Excluir"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </>
+            )}
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGenerateRecado(item, item.category);
+              }}
+              className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 text-white"
+              title="Gerar Recado"
+            >
+              <Eye className="h-3.5 w-3.5 mr-1" /> Gerar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCategoryButton = (cat: RecadoCategory) => {
+    const isSelected = activeCategory === cat.id && !searchTerm;
+    return (
+      <button
+        onClick={() => {
+          setActiveCategory(cat.id);
+          setSearchTerm("");
+        }}
+        className={cn(
+          "whitespace-nowrap py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 w-full text-left h-full",
+          "bg-card border rounded-lg hover:bg-muted/50",
+          isSelected ? "bg-primary text-primary-foreground border-primary shadow-md" : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        {cat.title.toUpperCase()}
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="p-6 bg-card rounded-lg shadow">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-primary">Recados Rápidos</h1>
+              <p className="text-muted-foreground mt-1">
+                Selecione um tema para gerar um recado pré-formatado
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={() => {
+                  saveToLocalStorage();
+                  toast({
+                    title: "Dados salvos",
+                    description: "Todas as alterações foram salvas com sucesso!",
+                  });
+                }}
+                size="icon"
+                variant={hasUnsavedChanges ? "default" : "outline"}
+                title={hasUnsavedChanges ? "Salvar Alterações" : "Tudo Salvo"}
+                className="h-9 w-9"
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+              {canEditRecados && (
+                <>
+                  <Button
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => {
+                      setEditingItem(undefined);
+                      setItemModalOpen(true);
+                    }}
+                    disabled={sortedCategories.length === 0}
+                  >
+                    <Plus className="h-5 w-5 mr-2" /> Novo Recado
+                  </Button>
+                  <Button variant="outline" onClick={() => setCategoryModalOpen(true)}>
+                    <Settings className="h-5 w-5 mr-2" /> Gerenciar Categorias
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+          {sortedCategories.length > 0 && !searchTerm && (
+            <div className="border-b border-border pb-2">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Arraste para reordenar as categorias:</h3>
+              <SortableList
+                items={sortedCategories}
+                onReorder={handleReorderCategories}
+                renderItem={(cat) => renderCategoryButton(cat)}
+                className="flex flex-wrap gap-2 items-start"
+                itemClassName="flex-shrink-0 w-auto"
+                handleClassName="left-0"
+              />
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 border rounded-md px-3 bg-card max-w-md mt-4">
+          <Input
+            type="text"
+            placeholder="Buscar recados por título ou categoria..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 bg-card"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+              title="Limpar busca"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      {/* Lista de Recados (Novo Layout de Grid) */}
+      <Card className="overflow-hidden">
+        {searchTerm && (
+          <div className="bg-primary/5 p-4 font-bold text-primary border-b border-border">
+            Resultados da Busca ({itemsToDisplay.length})
+          </div>
+        )}
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 p-4">
+            {itemsToDisplay.length > 0 ? (
+              itemsToDisplay.map(renderRecadoItem)
+            ) : (
+              <div className="col-span-full text-center py-6 text-muted-foreground border border-dashed rounded-lg">
+                <p>
+                  {searchTerm
+                    ? "Nenhum recado encontrado."
+                    : sortedCategories.length === 0
+                    ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
+                    : "Nenhum recado nesta categoria. Clique em 'Novo Recado' para adicionar."
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <RecadoItemModal
+        open={itemModalOpen}
+        onClose={handleCloseItemModal}
+        onSave={handleSaveItem}
+        categories={recadoCategories}
+        editingItem={editingItem}
+      />
+      <RecadoCategoryModal
+        isOpen={categoryModalOpen}
+        onClose={handleCloseCategoryModal}
+        onSave={handleSaveCategory}
+        onEdit={handleEditCategory}
+        onDelete={handleDeleteCategory}
+        categories={recadoCategories}
+        category={editingCategory}
+      />
+      {selectedItem && (
+        <RecadoGeneratorModal
+          isOpen={generatorModalOpen}
+          onClose={() => setGeneratorModalOpen(false)}
+          item={selectedItem.item}
+          category={selectedItem.category}
+          onEditCategory={handleEditCategoryFromGenerator}
+        />
+      )}
+    </div>
+  );
+};
