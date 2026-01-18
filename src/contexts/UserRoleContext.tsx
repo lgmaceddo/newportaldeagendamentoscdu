@@ -64,11 +64,15 @@ export const UserRoleProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Função para verificar se o usuário pode editar uma seção
   const canEdit = (section: string): boolean => {
-    // Usuários comuns só podem editar a seção "informacoes"
-    if (!isAdmin && section !== 'informacoes') {
-      return false;
+    // Admins podem editar tudo
+    if (isAdmin) return true;
+
+    // Usuários comuns podem editar 'anotacoes' (pessoal) e 'informacoes' (legado/geral)
+    if (section === 'anotacoes' || section === 'informacoes') {
+      return true;
     }
-    return true;
+
+    return false;
   };
 
   return (
