@@ -953,9 +953,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   // Info & Estomaterapia
   const addInfoTagGeneric = async (tag: Omit<InfoTag, 'id'>, section: 'anotacoes' | 'estomaterapia', setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
-    const newTag = { ...tag, id: crypto.randomUUID() };
+    const newTag = { ...tag, id: crypto.randomUUID(), user_id: section === 'anotacoes' ? user?.id : undefined };
     setTags(prev => [...prev, newTag]);
-    await supabase.from('info_tags').insert({ id: newTag.id, name: newTag.name, color: newTag.color, order: newTag.order, section_type: section });
+    await supabase.from('info_tags').insert({
+      id: newTag.id,
+      name: newTag.name,
+      color: newTag.color,
+      order: newTag.order,
+      section_type: section,
+      user_id: newTag.user_id
+    });
   };
   const updateInfoTagGeneric = (tag: InfoTag, setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
     setTags(prev => prev.map(t => t.id === tag.id ? tag : t));
@@ -968,13 +975,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addInfoItemGeneric = async (item: Omit<InfoItem, 'id' | 'date'>, setData: React.Dispatch<React.SetStateAction<Record<string, InfoItem[]>>>) => {
     const newItem = { ...item, id: crypto.randomUUID(), date: new Date().toLocaleDateString('pt-BR') };
     setData(prev => ({ ...prev, [item.tagId]: [...(prev[item.tagId] || []), newItem] }));
-    await supabase.from('info_items').insert({ id: newItem.id, tag_id: item.tagId, title: newItem.title, content: newItem.content, date: newItem.date, info: newItem.info });
+    await supabase.from('info_items').insert({
+      id: newItem.id,
+      tag_id: item.tagId,
+      title: newItem.title,
+      content: newItem.content,
+      date: newItem.date,
+      info: newItem.info,
+      user_id: newItem.user_id
+    });
   };
   const addInfoTag = (tag: Omit<InfoTag, 'id'>) => addInfoTagGeneric(tag, 'anotacoes', setInfoTags);
   const updateInfoTag = (tag: InfoTag) => updateInfoTagGeneric(tag, setInfoTags);
   const deleteInfoTag = (tagId: string) => deleteInfoTagGeneric(tagId, setInfoTags);
   const reorderInfoTags = () => { };
-  const addInfoItem = (item: Omit<InfoItem, 'id' | 'date'>) => addInfoItemGeneric(item, setInfoData);
+
+  const addInfoItem = (item: Omit<InfoItem, 'id' | 'date'>) => {
+    // Injetar user_id para anotações pessoais
+    const itemWithUser = { ...item, user_id: user?.id };
+    addInfoItemGeneric(itemWithUser, setInfoData);
+  };
+
   const updateInfoItem = (item: InfoItem) => {
     setInfoData(prev => ({ ...prev, [item.tagId]: prev[item.tagId].map(i => i.id === item.id ? item : i) }));
     supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();

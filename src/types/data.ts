@@ -176,6 +176,7 @@ export interface InfoTag {
   name: string;
   color: string; // Para estilização
   order?: number;
+  user_id?: string; // NOVO: Para identificar o proprietário (privacidade)
 }
 
 export interface Attachment {
@@ -194,4 +195,5 @@ export interface InfoItem {
   date: string; // Data de criação/atualização
   attachments: Attachment[]; // NOVO CAMPO
   info?: string; // Adicionando o campo info (Informações Adicionais)
+  user_id?: string; // NOVO: Para identificar o proprietário (privacidade)
 }
