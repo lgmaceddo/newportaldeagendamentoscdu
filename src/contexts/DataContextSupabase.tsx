@@ -1001,8 +1001,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();
   };
   const deleteInfoItem = (itemId: string, tagId: string) => {
-    setInfoData(prev => ({ ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) }));
-    supabase.from('info_items').delete().eq('id', itemId).then();
+    setInfoData(prev => {
+      if (!prev[tagId]) return prev;
+      return { ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) };
+    });
+    supabase.from('info_items').delete().eq('id', itemId).then(({ error }) => {
+      if (error) console.error("Error deleting info item:", error);
+    });
   };
   const addEstomaterapiaTag = (tag: Omit<InfoTag, 'id'>) => addInfoTagGeneric(tag, 'estomaterapia', setEstomaterapiaTags);
   const updateEstomaterapiaTag = (tag: InfoTag) => updateInfoTagGeneric(tag, setEstomaterapiaTags);
@@ -1010,12 +1015,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const reorderEstomaterapiaTags = () => { };
   const addEstomaterapiaItem = (item: Omit<InfoItem, 'id' | 'date'>) => addInfoItemGeneric(item, setEstomaterapiaData);
   const updateEstomaterapiaItem = (item: InfoItem) => {
-    setEstomaterapiaData(prev => ({ ...prev, [item.tagId]: prev[item.tagId].map(i => i.id === item.id ? item : i) }));
+    setEstomaterapiaData(prev => {
+      if (!prev[item.tagId]) return prev;
+      return { ...prev, [item.tagId]: prev[item.tagId].map(i => i.id === item.id ? item : i) };
+    });
     supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();
   };
   const deleteEstomaterapiaItem = (itemId: string, tagId: string) => {
-    setEstomaterapiaData(prev => ({ ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) }));
-    supabase.from('info_items').delete().eq('id', itemId).then();
+    setEstomaterapiaData(prev => {
+      if (!prev[tagId]) return prev;
+      return { ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) };
+    });
+    supabase.from('info_items').delete().eq('id', itemId).then(({ error }) => {
+      if (error) console.error("Error deleting estomaterapia item:", error);
+    });
   };
 
   // Stubs
