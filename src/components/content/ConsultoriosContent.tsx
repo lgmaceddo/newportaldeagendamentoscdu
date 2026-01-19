@@ -40,8 +40,8 @@ export const ConsultoriosContent = ({ data, onAdd, onUpdate, onDelete }: Consult
     office.ramal.toLowerCase().includes(lowerSearchTerm) ||
     office.schedule.toLowerCase().includes(lowerSearchTerm) ||
     (office.specialties && office.specialties.some(s => s.toLowerCase().includes(lowerSearchTerm))) ||
-    (office.attendants && office.attendants.some(a => 
-      a.name.toLowerCase().includes(lowerSearchTerm) || 
+    (office.attendants && office.attendants.some(a =>
+      a.name.toLowerCase().includes(lowerSearchTerm) ||
       a.username.toLowerCase().includes(lowerSearchTerm)
     ))
   );
@@ -168,6 +168,7 @@ export const ConsultoriosContent = ({ data, onAdd, onUpdate, onDelete }: Consult
                 key={office.id}
                 office={office}
                 onEdit={handleEdit}
+                onUpdate={onUpdate}
                 onDelete={handleDelete}
                 canEdit={canEditConsultorios}
               />
