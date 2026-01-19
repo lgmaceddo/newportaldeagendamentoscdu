@@ -17,23 +17,23 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
   const handleCopyContact = (contact: ContactPoint) => {
     // Formatar o texto para cópia com cada campo em uma linha separada
     let textLines: string[] = [];
-    
+
     textLines.push(`📍 ${contact.setor}`);
-    
+
     if (contact.local) {
-        textLines.push(`🏢 Local: ${contact.local}`);
+      textLines.push(`🏢 Local: ${contact.local}`);
     }
-    
+
     if (contact.ramal) {
-        textLines.push(`☎️ Ramal: ${contact.ramal}`);
+      textLines.push(`☎️ Ramal: ${contact.ramal}`);
     }
-    
+
     if (contact.telefone) {
-        textLines.push(`📞 Telefone: ${contact.telefone}`);
+      textLines.push(`📞 Telefone: ${contact.telefone}`);
     }
-    
+
     if (contact.whatsapp) {
-        textLines.push(`💬 WhatsApp: ${contact.whatsapp}`);
+      textLines.push(`💬 WhatsApp: ${contact.whatsapp}`);
     }
 
     navigator.clipboard.writeText(textLines.join('\n'));
@@ -70,7 +70,7 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
                 {point.local}
               </span>
             )}
-            
+
             {point.ramal && (
               <span className="truncate" title={`Ramal: ${point.ramal}`}>
                 <Phone className="h-3 w-3 text-primary inline mr-1" />
@@ -78,7 +78,7 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
                 <span className="font-bold text-primary"> {point.ramal}</span>
               </span>
             )}
-            
+
             {point.telefone && (
               <span className="truncate" title={`Telefone: ${point.telefone}`}>
                 <Phone className="h-3 w-3 text-primary inline mr-1" />
@@ -86,7 +86,7 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
                 <span className="font-bold"> {point.telefone}</span>
               </span>
             )}
-            
+
             {point.whatsapp && (
               <span className="truncate" title={`WhatsApp: ${point.whatsapp}`}>
                 <Smartphone className="h-3 w-3 text-green-600 inline mr-1" />
@@ -95,6 +95,13 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
               </span>
             )}
           </div>
+
+          {/* Descrição opcional */}
+          {point.description && (
+            <div className="w-full text-xs text-muted-foreground italic mt-2 pl-2 border-l-2 border-primary/20 break-words">
+              {point.description}
+            </div>
+          )}
         </div>
 
         {/* Ações - alinhadas à direita */}
