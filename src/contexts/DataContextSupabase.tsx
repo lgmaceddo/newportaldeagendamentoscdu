@@ -1002,11 +1002,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   const deleteInfoItem = (itemId: string, tagId: string) => {
     setInfoData(prev => {
-      if (!prev[tagId]) return prev;
-      return { ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) };
+      if (!prev || !prev[tagId]) return prev;
+      return {
+        ...prev,
+        [tagId]: prev[tagId].filter(i => i.id !== itemId)
+      };
     });
     supabase.from('info_items').delete().eq('id', itemId).then(({ error }) => {
-      if (error) console.error("Error deleting info item:", error);
+      if (error) toast.error("Erro ao sincronizar exclusão com o servidor.");
     });
   };
   const addEstomaterapiaTag = (tag: Omit<InfoTag, 'id'>) => addInfoTagGeneric(tag, 'estomaterapia', setEstomaterapiaTags);
@@ -1023,11 +1026,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   const deleteEstomaterapiaItem = (itemId: string, tagId: string) => {
     setEstomaterapiaData(prev => {
-      if (!prev[tagId]) return prev;
+      if (!prev || !prev[tagId]) return prev;
       return { ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) };
     });
     supabase.from('info_items').delete().eq('id', itemId).then(({ error }) => {
-      if (error) console.error("Error deleting estomaterapia item:", error);
+      if (error) toast.error("Erro ao sincronizar exclusão com o servidor.");
     });
   };
 
