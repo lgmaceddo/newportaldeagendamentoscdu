@@ -44,19 +44,19 @@ export const ExamesContent = ({ categories, data }: ExamesContentProps) => {
     if (location.state?.searchResult?.type === 'exam') {
       const categoryId = location.state.searchResult.categoryId;
       const itemId = location.state.searchResult.itemId;
-      
+
       // Set the correct category
       if (categoryId) {
         setActiveCategory(categoryId);
       }
-      
+
       // Find and view the specific exam
       const categoryExams = data[categoryId] || [];
       const exam = categoryExams.find(e => e.id === itemId);
       if (exam) {
         setViewingExam(exam);
         setDetailsModalOpen(true);
-        
+
         // Clear the location state to prevent re-triggering
         window.history.replaceState({}, document.title, location.pathname);
       }
@@ -74,14 +74,15 @@ export const ExamesContent = ({ categories, data }: ExamesContentProps) => {
   }, [categories, activeCategory]);
 
   // Consolida todos os itens para a busca
-  const allItems: (ExamItem & { categoryId: string })[] = categories.flatMap(cat => (data[cat.id] || []).map(item => ({ ...item, categoryId: cat.id })) );
-  
+  const allItems: (ExamItem & { categoryId: string })[] = categories.flatMap(cat => (data[cat.id] || []).map(item => ({ ...item, categoryId: cat.id })));
+
   const filteredItems = allItems
     .filter((item) => {
       const lowerTerm = searchTerm.toLowerCase();
-      const locationStr = Array.isArray(item.location) ? item.location.join(' ').toLowerCase() : (item.location || '').toLowerCase();
+      const locationArr = Array.isArray(item.location) ? item.location : [];
+      const locationStr = locationArr.join(' ').toLowerCase();
       // Removido setorStr e item.extension da busca
-      
+
       return item.title.toLowerCase().includes(lowerTerm) ||
         locationStr.includes(lowerTerm);
     })
@@ -94,7 +95,7 @@ export const ExamesContent = ({ categories, data }: ExamesContentProps) => {
   const handleSaveExam = async (formData: ExamFormData) => {
     try {
       const examData: ExamItem = {
-        id: editingExam?.id || `e-${Date.now()}`,
+        id: editingExam?.id || crypto.randomUUID(),
         title: formData.title,
         location: formData.location, // Agora é string[]
         // setor e extension removidos
@@ -163,7 +164,7 @@ export const ExamesContent = ({ categories, data }: ExamesContentProps) => {
 
   const handleAddCategory = (formData: CategoryFormData) => {
     const newCategory: Category = {
-      id: `cat-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: formData.name,
       color: formData.color,
     };
@@ -215,10 +216,10 @@ export const ExamesContent = ({ categories, data }: ExamesContentProps) => {
   const renderExamItem = (item: ExamItem & { categoryId: string }) => {
     const category = categories.find(c => c.id === item.categoryId);
     const categoryClasses = category ? getCategoryBadgeClasses(category.color) : 'bg-muted text-muted-foreground';
-    
+
     // Lida com o location como array
     const locationStr = Array.isArray(item.location) ? item.location.join(' / ') : 'N/A';
-    
+
     // Obtém a classe de cor do texto para a localização (usando o primeiro local para cor)
     const locationTextClass = getLocationTextClass(Array.isArray(item.location) ? item.location[0] : item.location);
 
@@ -415,8 +416,8 @@ export const ExamesContent = ({ categories, data }: ExamesContentProps) => {
               {searchTerm
                 ? `Nenhum exame encontrado para "${searchTerm}".`
                 : categories.length === 0
-                ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
-                : `Nenhum exame cadastrado na categoria ${categories.find(c => c.id === activeCategory)?.name || 'selecionada'}.`}
+                  ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
+                  : `Nenhum exame cadastrado na categoria ${categories.find(c => c.id === activeCategory)?.name || 'selecionada'}.`}
             </CardContent>
           )}
         </div>

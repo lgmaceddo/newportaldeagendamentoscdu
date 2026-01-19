@@ -56,21 +56,21 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
   // Função auxiliar para parsear valores monetários (para honorários diferenciados)
   const parseMoneyValue = (value: string | undefined): number => {
     if (!value) return 0;
-    
+
     // Ensure value is treated as string for replacement operations
     const stringValue = String(value);
-    
+
     // Remove "R$", espaços, e pontos de milhar
     const cleaned = stringValue.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
     const parsed = parseFloat(cleaned);
-    
+
     return isNaN(parsed) ? 0 : parsed;
   }
 
   useEffect(() => {
     if (isOpen && editingItem) {
       // O categoryId já vem no editingItem.oldCategoryId, mas o form precisa do categoryId atual
-      setValue("categoryId", editingItem.oldCategoryId); 
+      setValue("categoryId", editingItem.oldCategoryId);
       setValue("codigo", editingItem.codigo);
       setValue("nome", editingItem.nome);
       setValue("honorario", editingItem.honorario);
@@ -106,7 +106,7 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
       });
       return;
     }
-    
+
     const valor = parseMoneyValue(novoValor);
     if (valor <= 0) {
       toast({
@@ -118,13 +118,13 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
     }
 
     const novoHonorario: DiferenciatedFee = {
-      id: `hd-${Date.now()}`,
+      id: crypto.randomUUID(),
       profissional: novoProfissional.trim().toUpperCase(),
       valor: valor,
       genero: novoGenero,
     };
 
-    setHonorariosDiferenciados([...honorariosDiferenciados, novoHonorario].sort((a, b) => 
+    setHonorariosDiferenciados([...honorariosDiferenciados, novoHonorario].sort((a, b) =>
       a.profissional.localeCompare(b.profissional)
     ));
     setNovoProfissional("");
@@ -151,10 +151,10 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
     if (editingItem) {
       // Usa a nova função para lidar com a mudança de categoria
       moveAndUpdateValueTable(
-        viewType, 
-        editingItem.oldCategoryId, 
-        data.categoryId, 
-        editingItem.id, 
+        viewType,
+        editingItem.oldCategoryId,
+        data.categoryId,
+        editingItem.id,
         valueItemUpdates
       );
       toast({
@@ -167,7 +167,7 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
         title: "Valor adicionado",
         description: "O novo valor foi adicionado com sucesso.",
       });
-      
+
       // Mostrar notificação de novo item
       toast({
         title: "Novo exame adicionado",
@@ -200,21 +200,21 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
           <h2 className="text-xl font-bold text-foreground">
             {editingItem ? "Editar Valor" : "Adicionar Novo Valor"}
           </h2>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-muted-foreground hover:text-foreground"
             aria-label="Fechar modal de valores"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="categoryId">Categoria</Label>
-              <Select 
-                value={watch("categoryId")} 
+              <Select
+                value={watch("categoryId")}
                 onValueChange={(value) => setValue("categoryId", value)}
               >
                 <SelectTrigger>
@@ -236,10 +236,10 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
             </div>
             <div>
               <Label htmlFor="codigo">Código</Label>
-              <Input 
-                id="codigo" 
-                {...register("codigo")} 
-                placeholder="Ex: 40808017" 
+              <Input
+                id="codigo"
+                {...register("codigo")}
+                placeholder="Ex: 40808017"
               />
               {errors.codigo && (
                 <p className="text-sm text-destructive mt-1">
@@ -248,13 +248,13 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               )}
             </div>
           </div>
-          
+
           <div>
             <Label htmlFor="nome">Nome do Exame</Label>
-            <Input 
-              id="nome" 
-              {...register("nome")} 
-              placeholder="Ex: Endoscopia Digestiva Alta" 
+            <Input
+              id="nome"
+              {...register("nome")}
+              placeholder="Ex: Endoscopia Digestiva Alta"
             />
             {errors.nome && (
               <p className="text-sm text-destructive mt-1">
@@ -262,16 +262,16 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               </p>
             )}
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="honorario">Honorário (PIX)</Label>
-              <Input 
-                id="honorario" 
-                type="number" 
-                step="0.01" 
-                {...register("honorario", { valueAsNumber: true })} 
-                placeholder="0,00" 
+              <Input
+                id="honorario"
+                type="number"
+                step="0.01"
+                {...register("honorario", { valueAsNumber: true })}
+                placeholder="0,00"
               />
               {errors.honorario && (
                 <p className="text-sm text-destructive mt-1">
@@ -281,12 +281,12 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
             </div>
             <div>
               <Label htmlFor="exame_cartao">Exame (Cartão)</Label>
-              <Input 
-                id="exame_cartao" 
-                type="number" 
-                step="0.01" 
-                {...register("exame_cartao", { valueAsNumber: true })} 
-                placeholder="0,00" 
+              <Input
+                id="exame_cartao"
+                type="number"
+                step="0.01"
+                {...register("exame_cartao", { valueAsNumber: true })}
+                placeholder="0,00"
               />
               {errors.exame_cartao && (
                 <p className="text-sm text-destructive mt-1">
@@ -295,17 +295,17 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               )}
             </div>
           </div>
-          
+
           {/* Campos de Material (Min e Max) - Agora inputs numéricos diretos */}
           <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/20">
             <div>
               <Label htmlFor="material_min" className="font-bold text-primary">Material Mínimo (R$)</Label>
-              <Input 
-                id="material_min" 
-                type="number" 
-                step="0.01" 
-                {...register("material_min", { valueAsNumber: true })} 
-                placeholder="0,00" 
+              <Input
+                id="material_min"
+                type="number"
+                step="0.01"
+                {...register("material_min", { valueAsNumber: true })}
+                placeholder="0,00"
               />
               {errors.material_min && (
                 <p className="text-sm text-destructive mt-1">
@@ -315,12 +315,12 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
             </div>
             <div>
               <Label htmlFor="material_max" className="font-bold text-primary">Material Máximo (R$)</Label>
-              <Input 
-                id="material_max" 
-                type="number" 
-                step="0.01" 
-                {...register("material_max", { valueAsNumber: true })} 
-                placeholder="0,00" 
+              <Input
+                id="material_max"
+                type="number"
+                step="0.01"
+                {...register("material_max", { valueAsNumber: true })}
+                placeholder="0,00"
               />
               {errors.material_max && (
                 <p className="text-sm text-destructive mt-1">
@@ -332,7 +332,7 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               Defina a faixa de custo de material. Se não houver custo, deixe 0,00.
             </p>
           </div>
-          
+
           <div className="bg-muted/50 p-4 rounded-lg space-y-2">
             <h3 className="font-semibold text-sm text-primary">Resumo de Valores</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -350,7 +350,7 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               </div>
             </div>
           </div>
-          
+
           <div className="border-t border-border pt-4 space-y-4">
             <div>
               <h3 className="font-semibold text-primary mb-3">
@@ -358,26 +358,24 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               </h3>
               {honorariosDiferenciados.length > 0 && (
                 <div className="space-y-2 mb-4">
-                  {[...honorariosDiferenciados].sort((a, b) => 
+                  {[...honorariosDiferenciados].sort((a, b) =>
                     a.profissional.localeCompare(b.profissional)
                   ).map((honorario) => {
                     const prefixo = honorario.genero === 'masculino' ? 'DRº' : 'DRª';
                     return (
-                      <div 
-                        key={honorario.id} 
+                      <div
+                        key={honorario.id}
                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                       >
                         <div className="flex items-center gap-3 flex-1">
-                          <div className={`p-2 rounded-full ${
-                            honorario.genero === 'masculino' 
-                              ? 'bg-blue-500/10' 
+                          <div className={`p-2 rounded-full ${honorario.genero === 'masculino'
+                              ? 'bg-blue-500/10'
                               : 'bg-pink-500/10'
-                          }`}>
-                            <User className={`h-4 w-4 ${
-                              honorario.genero === 'masculino' 
-                                ? 'text-blue-500' 
+                            }`}>
+                            <User className={`h-4 w-4 ${honorario.genero === 'masculino'
+                                ? 'text-blue-500'
                                 : 'text-pink-500'
-                            }`} />
+                              }`} />
                           </div>
                           <div>
                             <p className="font-medium text-foreground">{prefixo} {honorario.profissional}</p>
@@ -386,9 +384,9 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
                             </p>
                           </div>
                         </div>
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
+                        <Button
+                          type="button"
+                          variant="ghost"
                           size="sm"
                           onClick={() => removerHonorarioDiferenciado(honorario.id)}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -403,9 +401,9 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <Input 
-                      placeholder="Nome do Profissional" 
-                      value={novoProfissional} 
+                    <Input
+                      placeholder="Nome do Profissional"
+                      value={novoProfissional}
                       onChange={(e) => setNovoProfissional(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -416,8 +414,8 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
                     />
                   </div>
                   <div className="w-32">
-                    <Select 
-                      value={novoGenero} 
+                    <Select
+                      value={novoGenero}
                       onValueChange={(value: 'masculino' | 'feminino') => setNovoGenero(value)}
                     >
                       <SelectTrigger>
@@ -440,9 +438,9 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
                     </Select>
                   </div>
                   <div className="w-32">
-                    <Input 
-                      placeholder="Valor (R$)" 
-                      value={novoValor} 
+                    <Input
+                      placeholder="Valor (R$)"
+                      value={novoValor}
                       onChange={(e) => setNovoValor(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -452,8 +450,8 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
                       }}
                     />
                   </div>
-                  <Button 
-                    type="button" 
+                  <Button
+                    type="button"
                     onClick={adicionarHonorarioDiferenciado}
                     className="bg-primary hover:bg-primary/90"
                     size="icon"
@@ -467,17 +465,17 @@ export const ValueModal = ({ isOpen, onClose, viewType, categories, editingItem,
               </p>
             </div>
           </div>
-          
+
           <div className="flex justify-end space-x-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={onClose}
             >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="bg-primary hover:bg-primary/90"
             >
               Salvar Item

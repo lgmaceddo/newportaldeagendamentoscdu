@@ -50,23 +50,23 @@ export const ScriptsContent = ({ viewType, categories, data }: ScriptsContentPro
 
   // Check for search result in location state
   useEffect(() => {
-    if (location.state?.searchResult?.type === 'script' && 
-        location.state?.searchResult?.viewType === viewType) {
+    if (location.state?.searchResult?.type === 'script' &&
+      location.state?.searchResult?.viewType === viewType) {
       const categoryId = location.state.searchResult.categoryId;
       const itemId = location.state.searchResult.itemId;
-      
+
       // Set the correct category
       if (categoryId) {
         setActiveCategory(categoryId);
       }
-      
+
       // Find and view the specific script
       const categoryScripts = data[categoryId] || [];
       const script = categoryScripts.find(s => s.id === itemId);
       if (script) {
         setViewingScript(script);
         setDetailsModalOpen(true);
-        
+
         // Clear the location state to prevent re-triggering
         window.history.replaceState({}, document.title, location.pathname);
       }
@@ -87,7 +87,7 @@ export const ScriptsContent = ({ viewType, categories, data }: ScriptsContentPro
 
   const handleSaveScript = (formData: ScriptFormData) => {
     const scriptData: ScriptItem = {
-      id: editingScript?.id || `s-${Date.now()}`,
+      id: editingScript?.id || crypto.randomUUID(),
       title: formData.title,
       content: formData.content,
       order: formData.order || undefined,
@@ -141,7 +141,7 @@ export const ScriptsContent = ({ viewType, categories, data }: ScriptsContentPro
 
   const handleAddCategory = (formData: CategoryFormData) => {
     const newCategory: Category = {
-      id: `cat-${Date.now()}`,
+      id: crypto.randomUUID(),
       name: formData.name,
       color: formData.color,
     };
@@ -367,8 +367,8 @@ export const ScriptsContent = ({ viewType, categories, data }: ScriptsContentPro
                 {searchTerm
                   ? "Nenhum script encontrado."
                   : categories.length === 0
-                  ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
-                  : "Nenhum script nesta categoria. Clique em 'Novo Script' para adicionar."}
+                    ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
+                    : "Nenhum script nesta categoria. Clique em 'Novo Script' para adicionar."}
               </p>
             </div>
           )}

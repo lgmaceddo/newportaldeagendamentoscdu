@@ -21,7 +21,7 @@ export const OfficeModal = ({ isOpen, onClose, onSave, office }: OfficeModalProp
   const [specialties, setSpecialties] = useState<string[]>([]);
   const [specialtyInput, setSpecialtyInput] = useState("");
   const [attendants, setAttendants] = useState<Array<{ id: string; name: string; username: string; shift: string }>>([]);
-  
+
   // Mantemos os estados de profissionais, procedimentos, categorias e itens para carregar/salvar o objeto Office completo
   const [professionals, setProfessionals] = useState<Office['professionals']>([]);
   const [procedures, setProcedures] = useState<string[]>([]);
@@ -51,7 +51,7 @@ export const OfficeModal = ({ isOpen, onClose, onSave, office }: OfficeModalProp
       // Inicializa com a categoria padrão para novos consultórios
       setCategories([
         {
-          id: `cat-${Date.now()}-default`,
+          id: crypto.randomUUID(),
           name: "Informações do Setor",
           color: "text-blue-800"
         }
@@ -74,7 +74,7 @@ export const OfficeModal = ({ isOpen, onClose, onSave, office }: OfficeModalProp
   const handleAddAttendant = () => {
     setAttendants([
       ...attendants,
-      { id: Date.now().toString(), name: "", username: "", shift: "Manhã" },
+      { id: crypto.randomUUID(), name: "", username: "", shift: "Manhã" },
     ]);
   };
 

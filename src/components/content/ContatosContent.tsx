@@ -162,7 +162,7 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
 
   // ... (Handlers - add/update/delete - mantidos iguais) ...
   const handleAddCategory = (formData: CategoryFormData) => {
-    const newCategory: Category = { id: `cont-cat-${Date.now()}`, name: formData.name, color: formData.color };
+    const newCategory: Category = { id: crypto.randomUUID(), name: formData.name, color: formData.color };
     addContactCategory(viewType, newCategory);
     if (categories.length === 0) setActiveCategory(newCategory.id);
   };
