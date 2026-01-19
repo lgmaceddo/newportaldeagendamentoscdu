@@ -840,22 +840,74 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.map(g => g.id === groupId ? { ...g, ...updates } : g) } }; });
     supabase.from('contact_groups').update({ name: updates.name }).eq('id', groupId).then();
   };
-  const deleteContactGroup = (viewType: string, categoryId: string, groupId: string) => {
-    setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.filter(g => g.id !== groupId) } }; });
-    supabase.from('contact_groups').delete().eq('id', groupId).then();
+  const deleteContactGroup = async (viewType: string, categoryId: string, groupId: string) => {
+    // Optimistic Update
+    setContactData(prev => {
+      const currentViewData = prev[viewType] || {};
+      const categoryGroups = currentViewData[categoryId] || [];
+      return {
+        ...prev,
+        [viewType]: {
+          ...currentViewData,
+          [categoryId]: categoryGroups.filter(g => g.id !== groupId)
+        }
+      };
+    });
+
+    try {
+      const { error } = await supabase.from('contact_groups').delete().eq('id', groupId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao deletar grupo:", error);
+      toast.error("Falha ao excluir no servidor. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
+
   const addContactPoint = async (viewType: string, categoryId: string, groupId: string, point: Omit<ContactPoint, 'id'>) => {
     const newPoint = { ...point, id: crypto.randomUUID() };
     setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; const updatedList = list.map(g => g.id === groupId ? { ...g, points: [...g.points, newPoint] } : g); return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: updatedList } }; });
-    await supabase.from('contact_points').insert({ id: newPoint.id, group_id: groupId, setor: point.setor, local: point.local, ramal: point.ramal, telefone: point.telefone, whatsapp: point.whatsapp });
+    await supabase.from('contact_points').insert({ id: newPoint.id, group_id: groupId, setor: newPoint.setor, local: newPoint.local, ramal: newPoint.ramal, telefone: newPoint.telefone, whatsapp: newPoint.whatsapp, description: newPoint.description });
   };
+
   const updateContactPoint = (viewType: string, categoryId: string, groupId: string, pointId: string, updates: Partial<ContactPoint>) => {
     setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; const updatedList = list.map(g => g.id === groupId ? { ...g, points: g.points.map(p => p.id === pointId ? { ...p, ...updates } : p) } : g); return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: updatedList } }; });
     supabase.from('contact_points').update(updates).eq('id', pointId).then();
   };
-  const deleteContactPoint = (viewType: string, categoryId: string, groupId: string, pointId: string) => {
-    setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; const updatedList = list.map(g => g.id === groupId ? { ...g, points: g.points.filter(p => p.id !== pointId) } : g); return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: updatedList } }; });
-    supabase.from('contact_points').delete().eq('id', pointId).then();
+
+  const deleteContactPoint = async (viewType: string, categoryId: string, groupId: string, pointId: string) => {
+    // Optimistic Update
+    setContactData(prev => {
+      const currentViewData = prev[viewType] || {};
+      const categoryGroups = currentViewData[categoryId] || [];
+
+      const updatedGroups = categoryGroups.map(group => {
+        if (group.id === groupId) {
+          return {
+            ...group,
+            points: group.points.filter(p => p.id !== pointId)
+          };
+        }
+        return group;
+      });
+
+      return {
+        ...prev,
+        [viewType]: {
+          ...currentViewData,
+          [categoryId]: updatedGroups
+        }
+      };
+    });
+
+    try {
+      const { error } = await supabase.from('contact_points').delete().eq('id', pointId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao deletar ponto:", error);
+      toast.error("Falha ao excluir no servidor. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   // Notices
   const addNotice = async (notice: Omit<Notice, 'id'>) => {
