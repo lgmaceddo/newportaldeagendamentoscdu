@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Plus, Edit, Trash2, ChevronRight, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Office, OfficeCategory, OfficeItem } from "@/types/data";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +24,9 @@ interface OfficeCategoriesViewProps {
 
 export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCategoriesViewProps) => {
     const { toast } = useToast();
-    const [activeTab, setActiveTab] = useState<string>(office.categories?.[0]?.id || "");
+
+    // Mantendo controle de qual categoria está "focada" para adição/edição
+    const [targetCategoryId, setTargetCategoryId] = useState<string>("");
 
     // Modals States
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -69,12 +74,10 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
             const newCat: OfficeCategory = {
                 id: newId,
                 name: catName,
-                color: "text-blue-600" // Default color for now
+                color: "text-blue-600"
             };
             newCategories.push(newCat);
-            newItems[newId] = []; // Initialize items array
-            // Set active tab to new category
-            setTimeout(() => setActiveTab(newId), 0);
+            newItems[newId] = [];
         }
 
         onUpdate({
@@ -98,15 +101,12 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                 categories: newCategories,
                 items: newItems
             });
-
-            if (activeTab === catId && newCategories.length > 0) {
-                setActiveTab(newCategories[0].id);
-            }
         }
     };
 
     // --- Item Handlers ---
-    const handleOpenItemModal = (item?: OfficeItem) => {
+    const handleOpenItemModal = (catId: string, item?: OfficeItem) => {
+        setTargetCategoryId(catId);
         if (item) {
             setEditingItem(item);
             setItemTitle(item.title);
@@ -122,9 +122,9 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
     };
 
     const handleSaveItem = () => {
-        if (!itemTitle.trim() || !activeTab) return;
+        if (!itemTitle.trim() || !targetCategoryId) return;
 
-        const currentItems = items[activeTab] || [];
+        const currentItems = items[targetCategoryId] || [];
         let updatedItemsList = [...currentItems];
 
         if (editingItem) {
@@ -145,7 +145,7 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
             ...office,
             items: {
                 ...items,
-                [activeTab]: updatedItemsList
+                [targetCategoryId]: updatedItemsList
             }
         });
 
@@ -153,25 +153,20 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
         toast({ title: "Procedimento salvo com sucesso!" });
     };
 
-    const handleDeleteItem = (itemId: string) => {
+    const handleDeleteItem = (catId: string, itemId: string) => {
         if (confirm("Excluir este procedimento?")) {
-            const currentItems = items[activeTab] || [];
+            const currentItems = items[catId] || [];
             const updatedItemsList = currentItems.filter(i => i.id !== itemId);
 
             onUpdate({
                 ...office,
                 items: {
                     ...items,
-                    [activeTab]: updatedItemsList
+                    [catId]: updatedItemsList
                 }
             });
         }
     };
-
-    // Ensure active tab is valid
-    if (categories.length > 0 && !categories.find(c => c.id === activeTab)) {
-        setActiveTab(categories[0].id);
-    }
 
     return (
         <div className="space-y-4">
@@ -196,73 +191,64 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                     )}
                 </div>
             ) : (
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                        <TabsList className="bg-transparent h-auto p-0 gap-2">
-                            {categories.map(cat => (
-                                <TabsTrigger
-                                    key={cat.id}
-                                    value={cat.id}
-                                    className={cn(
-                                        "data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
-                                        "border border-border bg-card px-4 py-2 h-9"
-                                    )}
-                                >
-                                    {cat.name}
-                                    {canEdit && activeTab === cat.id && (
-                                        <div className="ml-2 flex gap-1" onClick={e => e.stopPropagation()}>
-                                            <Edit
-                                                className="h-3 w-3 hover:text-yellow-300 cursor-pointer"
-                                                onClick={() => handleOpenCategoryModal(cat)}
-                                            />
-                                            <Trash2
-                                                className="h-3 w-3 hover:text-red-300 cursor-pointer"
-                                                onClick={() => handleDeleteCategory(cat.id)}
-                                            />
+                <Accordion type="single" collapsible className="w-full space-y-2">
+                    {categories.map(cat => (
+                        <AccordionItem value={cat.id} key={cat.id} className="border rounded-md px-2 bg-card">
+                            <AccordionTrigger className="hover:no-underline py-3 px-2">
+                                <div className="flex items-center gap-2 w-full pr-4 text-left">
+                                    <span className="font-semibold text-foreground">{cat.name}</span>
+                                    <span className="text-xs text-muted-foreground ml-2 font-normal">
+                                        ({(items[cat.id] || []).length} itens)
+                                    </span>
+
+                                    {/* Botões de Ação da Categoria - Com Stop Propagation */}
+                                    {canEdit && (
+                                        <div className="ml-auto flex gap-1 isolate" onClick={e => e.stopPropagation()}>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleOpenCategoryModal(cat); }}>
+                                                <Edit className="h-3.5 w-3.5 text-muted-foreground hover:text-yellow-600" />
+                                            </Button>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }}>
+                                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-red-600" />
+                                            </Button>
                                         </div>
                                     )}
-                                </TabsTrigger>
-                            ))}
-                        </TabsList>
-                    </div>
-
-                    <div className="mt-4">
-                        {categories.map(cat => (
-                            <TabsContent key={cat.id} value={cat.id} className="mt-0 space-y-4">
-                                <div className="flex justify-end">
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-2 pt-0">
+                                <div className="flex justify-end mb-4">
                                     {canEdit && (
-                                        <Button size="sm" onClick={() => handleOpenItemModal()} className="h-8">
+                                        <Button size="sm" onClick={() => handleOpenItemModal(cat.id)} className="h-8">
                                             <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Procedimento
                                         </Button>
                                     )}
                                 </div>
 
-                                <div className="grid gap-4">
+                                <div className="grid gap-3">
                                     {(items[cat.id] || []).length === 0 ? (
-                                        <p className="text-sm text-muted-foreground text-center py-4 italic">
+                                        <p className="text-sm text-muted-foreground text-center py-2 italic bg-muted/20 rounded">
                                             Nenhum procedimento cadastrado nesta categoria.
                                         </p>
                                     ) : (
                                         (items[cat.id] || []).map(item => (
-                                            <Card key={item.id} className="bg-card hover:border-primary/50 transition-colors">
-                                                <CardContent className="p-4">
-                                                    <div className="flex justify-between items-start gap-4">
+                                            <Card key={item.id} className="bg-muted/10 border-l-4 border-l-primary/40 hover:border-l-primary transition-all shadow-sm">
+                                                <CardContent className="p-3">
+                                                    <div className="flex justify-between items-start gap-3">
                                                         <div className="space-y-1">
-                                                            <h5 className="font-semibold text-foreground">{item.title}</h5>
-                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.content}</p>
+                                                            <h5 className="font-bold text-sm text-foreground">{item.title}</h5>
+                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{item.content}</p>
                                                             {item.info && (
-                                                                <div className="mt-2 text-xs bg-muted p-2 rounded text-muted-foreground">
+                                                                <div className="mt-2 text-xs bg-background p-1.5 rounded text-muted-foreground border inline-block">
                                                                     <strong>Obs:</strong> {item.info}
                                                                 </div>
                                                             )}
                                                         </div>
                                                         {canEdit && (
-                                                            <div className="flex flex-col gap-1">
-                                                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleOpenItemModal(item)}>
-                                                                    <Edit className="h-3.5 w-3.5" />
+                                                            <div className="flex flex-col gap-1 flex-shrink-0">
+                                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleOpenItemModal(cat.id, item)}>
+                                                                    <Edit className="h-3 w-3" />
                                                                 </Button>
-                                                                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(item.id)}>
-                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => handleDeleteItem(cat.id, item.id)}>
+                                                                    <Trash2 className="h-3 w-3" />
                                                                 </Button>
                                                             </div>
                                                         )}
@@ -272,13 +258,13 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                                         ))
                                     )}
                                 </div>
-                            </TabsContent>
-                        ))}
-                    </div>
-                </Tabs>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
             )}
 
-            {/* Category Modal */}
+            {/* Category Modal (Create/Edit) */}
             <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -287,7 +273,7 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label>Nome da Categoria</Label>
-                            <Input value={catName} onChange={e => setCatName(e.target.value)} placeholder="Ex: Procedimentos Cirúrgicos" />
+                            <Input value={catName} onChange={e => setCatName(e.target.value)} placeholder="Ex: Procedimentos Gerais, Regras de Atendimento..." />
                         </div>
                     </div>
                     <DialogFooter>
@@ -297,7 +283,7 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                 </DialogContent>
             </Dialog>
 
-            {/* Item Modal */}
+            {/* Item Modal (Create/Edit) */}
             <Dialog open={isItemModalOpen} onOpenChange={setIsItemModalOpen}>
                 <DialogContent className="max-w-xl">
                     <DialogHeader>
@@ -305,21 +291,21 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label>Título</Label>
-                            <Input value={itemTitle} onChange={e => setItemTitle(e.target.value)} placeholder="Ex: Retirada de Pontos" />
+                            <Label>Título do Procedimento</Label>
+                            <Input value={itemTitle} onChange={e => setItemTitle(e.target.value)} placeholder="Ex: Retirada de Pontos, Troca de Curativo..." />
                         </div>
                         <div className="space-y-2">
-                            <Label>Regras / Descrição</Label>
+                            <Label>Regras / Descrição Detalhada</Label>
                             <Textarea
                                 value={itemContent}
                                 onChange={e => setItemContent(e.target.value)}
-                                placeholder="Descreva as regras ou passos..."
-                                className="min-h-[100px]"
+                                placeholder="Descreva o passo a passo, materiais necessários, ou regras específicas..."
+                                className="min-h-[120px]"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>Informações Adicionais (Opcional)</Label>
-                            <Input value={itemInfo} onChange={e => setItemInfo(e.target.value)} placeholder="Ex: Necessário autorização prévia" />
+                            <Label>Observações Adicionais (Opcional)</Label>
+                            <Input value={itemInfo} onChange={e => setItemInfo(e.target.value)} placeholder="Ex: Requer autorização prévia, Apenas médico..." />
                         </div>
                     </div>
                     <DialogFooter>
