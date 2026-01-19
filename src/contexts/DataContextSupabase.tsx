@@ -236,27 +236,65 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]);
 
   const loadAllDataFromSupabase = async () => {
-    console.log("Iniciando carregamento de dados do Supabase...");
+    // Timeout de segurança para evitar loading infinito
+    const timeoutId = setTimeout(() => {
+      // Verifica se ainda está carregando antes de forçar o fim
+      setLoading(currentLoading => {
+        if (currentLoading) {
+          console.error("Timeout forçado no carregamento de dados do Supabase");
+          toast.error("O servidor demorou para responder. Exibindo dados disponíveis.");
+          return false;
+        }
+        return false;
+      });
+    }, 15000); // 15 segundos de limite máximo
+
+    console.log("Iniciando carregamento OTIMIZADO (Via Promise.all)...");
+
     try {
       setLoading(true);
 
-      // Fetch User Name from Profile
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', user.id)
-          .maybeSingle();
+      // Definição das Promises para execução paralela
+      // Agrupamos chamadas relacionadas para facilitar a desestruturação
+      const pProfile = user ? supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle() : Promise.resolve({ data: null });
+      const pHeaderTags = supabase.from('header_tags').select('*').order('order', { ascending: true });
+      const pScripts = Promise.all([supabase.from('script_categories').select('*'), supabase.from('scripts').select('*')]);
+      const pExams = Promise.all([supabase.from('exam_categories').select('*'), supabase.from('exams').select('*')]);
+      const pContacts = Promise.all([supabase.from('contact_categories').select('*'), supabase.from('contact_groups').select('*'), supabase.from('contact_points').select('*')]);
+      const pValues = Promise.all([supabase.from('value_table_categories').select('*'), supabase.from('value_table_items').select('*')]);
+      const pOffices = supabase.from('offices').select('*');
+      const pNotices = supabase.from('notices').select('*');
+      const pDelivery = supabase.from('exam_delivery_attendants').select('*');
+      const pRecados = Promise.all([supabase.from('recado_categories').select('*'), supabase.from('recado_items').select('*')]);
+      const pInfo = Promise.all([supabase.from('info_tags').select('*'), supabase.from('info_items').select('*')]);
 
-        if (profileData?.display_name) {
-          setUserNameState(profileData.display_name);
-        }
+      // Execução Paralela - Dispara tudo de uma vez
+      const [
+        profileRes,
+        htRes,
+        [scRes, sRes],
+        [ecRes, eRes],
+        [ccRes, cgRes, cpRes],
+        [vtcRes, vtiRes],
+        officesRes,
+        noticesRes,
+        deliveryRes,
+        [rcRes, riRes],
+        [itRes, iiRes]
+      ] = await Promise.all([
+        pProfile, pHeaderTags, pScripts, pExams, pContacts, pValues, pOffices, pNotices, pDelivery, pRecados, pInfo
+      ]);
+
+      // --- PROCESSAMENTO DOS DADOS ---
+
+      // 1. Profile
+      if (profileRes.data?.display_name) {
+        setUserNameState(profileRes.data.display_name);
       }
 
-      // Fetch Header Tags
-      const { data: htData } = await supabase.from('header_tags').select('*').order('order', { ascending: true });
-      if (htData && htData.length > 0) {
-        const headerTags = htData.map((tag: any) => ({
+      // 2. Header Tags
+      if (htRes.data && htRes.data.length > 0) {
+        const headerTags = htRes.data.map((tag: any) => ({
           id: tag.id,
           tag: tag.tag,
           title: tag.title,
@@ -268,91 +306,65 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setHeaderTagData(headerTags);
       }
 
-      // Fetch Script Categories & Scripts
-      console.log("Buscando categorias e scripts...");
-      const { data: scData, error: scError } = await supabase.from('script_categories').select('*');
-      if (scError) console.error("Erro script_categories:", scError);
-
-      const { data: sData, error: sError } = await supabase.from('scripts').select('*');
-      if (sError) console.error("Erro scripts:", sError);
-
-      // CHECK: If DB is empty, use LocalStorage as fallback
-      if (!scData || scData.length === 0) {
-        console.warn("Supabase returned no script categories. Attempting fallback to LocalStorage.");
-        const loaded = loadFromLocalStorage();
-        if (loaded) {
-          toast.warning("Banco de dados vazio. Dados locais recuperados (Modo Offline/Migração).");
-        } else {
-          // Initialize with defaults if absolutely nothing exists
-          setScriptCategories(initialScriptCategories);
-          setScriptData(initialScriptData);
-          toast.info("Banco de dados vazio. Iniciando com dados padrão.");
-        }
-        setLoading(false);
-        // Return here to allow UI to render with local/default data while DB is empty
-        return;
+      // 3. Scripts
+      // Checagem de banco vazio somente se nem HeaderTags nem Scripts vierem
+      if ((!scRes.data || scRes.data.length === 0) && (!htRes.data || htRes.data.length === 0)) {
+        console.warn("Possível banco vazio. Tentando fallback local para garantir.");
+        loadFromLocalStorage();
       }
 
-      if (scData && sData) {
+      if (scRes.data && sRes.data) {
         const newSC: Record<string, Category[]> = {};
         const newSD: Record<string, Record<string, ScriptItem[]>> = {};
 
-        scData.forEach((cat: any) => {
+        scRes.data.forEach((cat: any) => {
           if (!newSC[cat.view_type]) newSC[cat.view_type] = [];
           newSC[cat.view_type].push(cat);
           newSD[cat.view_type] = newSD[cat.view_type] || {};
           newSD[cat.view_type][cat.id] = [];
         });
 
-        sData.forEach((script: any) => {
-          const viewType = scData.find((c: any) => c.id === script.category_id)?.view_type;
+        sRes.data.forEach((script: any) => {
+          const viewType = scRes.data.find((c: any) => c.id === script.category_id)?.view_type;
           if (viewType && newSD[viewType][script.category_id]) {
             newSD[viewType][script.category_id].push(script);
           }
         });
-
         setScriptCategories(newSC);
         setScriptData(newSD);
       }
 
-      // Fetch Exam Categories & Exams
-      const { data: ecData } = await supabase.from('exam_categories').select('*');
-      const { data: eData } = await supabase.from('exams').select('*');
-      if (ecData && eData) {
-        setExamCategories(ecData);
+      // 4. Exams
+      if (ecRes.data && eRes.data) {
+        setExamCategories(ecRes.data);
         const newED: Record<string, ExamItem[]> = {};
-        eData.forEach((exam: any) => {
+        eRes.data.forEach((exam: any) => {
           if (!newED[exam.category_id]) newED[exam.category_id] = [];
-          // Ensure location is array
-          const examWithFixedLocation = {
+          newED[exam.category_id].push({
             ...exam,
             location: safeParse(exam.location, [])
-          };
-          newED[exam.category_id].push(examWithFixedLocation);
+          });
         });
         setExamData(newED);
       }
 
-      // Fetch Contact Categories, Groups, Points
-      const { data: ccData } = await supabase.from('contact_categories').select('*');
-      const { data: cgData } = await supabase.from('contact_groups').select('*');
-      const { data: cpData } = await supabase.from('contact_points').select('*');
-
-      if (ccData && cgData && cpData) {
+      // 5. Contacts
+      if (ccRes.data && cgRes.data && cpRes.data) {
         const newCC: Record<string, Category[]> = {};
         const newCD: Record<string, Record<string, ContactGroup[]>> = {};
 
-        ccData.forEach((cat: any) => {
+        ccRes.data.forEach((cat: any) => {
           if (!newCC[cat.view_type]) newCC[cat.view_type] = [];
           newCC[cat.view_type].push(cat);
           newCD[cat.view_type] = newCD[cat.view_type] || {};
           newCD[cat.view_type][cat.id] = [];
         });
 
-        cgData.forEach((group: any) => {
-          const viewType = ccData.find((c: any) => c.id === group.category_id)?.view_type;
+        cgRes.data.forEach((group: any) => {
+          const viewType = ccRes.data.find((c: any) => c.id === group.category_id)?.view_type;
           if (viewType && newCD[viewType][group.category_id]) {
-            const points = cpData.filter((p: any) => p.group_id === group.id);
+            // Ordenar pontos é boa prática, mas o backend não garante ordem sem order by
+            const points = cpRes.data.filter((p: any) => p.group_id === group.id);
             newCD[viewType][group.category_id].push({ ...group, points });
           }
         });
@@ -360,14 +372,41 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setContactData(newCD);
       }
 
-      // Notices
-      const { data: nData } = await supabase.from('notices').select('*');
-      if (nData) setNoticeData(nData);
+      // 6. Value Table
+      if (vtcRes.data && vtiRes.data) {
+        const newVC: Record<string, Category[]> = {};
+        const newVD: Record<string, Record<string, ValueTableItem[]>> = {};
 
-      // Fetch Offices
-      const { data: oData } = await supabase.from('offices').select('*');
-      if (oData) {
-        const offices = oData.map((o: any) => ({
+        vtcRes.data.forEach((cat: any) => {
+          if (!newVC[cat.view_type]) newVC[cat.view_type] = [];
+          newVC[cat.view_type].push(cat);
+          newVD[cat.view_type] = newVD[cat.view_type] || {};
+          newVD[cat.view_type][cat.id] = [];
+        });
+
+        vtiRes.data.forEach((item: any) => {
+          const cat = vtcRes.data.find((c: any) => c.id === item.category_id);
+          if (cat && newVD[cat.view_type]) {
+            const parseNum = (v: any) => typeof v === 'string' ? parseFloat(v) : (v || 0);
+            const honorarios_diferenciados = safeParse(item.honorarios_diferenciados, []).map((h: any) => ({ ...h, valor: parseNum(h.valor) }));
+
+            newVD[cat.view_type][cat.id].push({
+              ...item,
+              honorario: parseNum(item.honorario),
+              exame_cartao: parseNum(item.exame_cartao),
+              material_min: parseNum(item.material_min),
+              material_max: parseNum(item.material_max),
+              honorarios_diferenciados
+            });
+          }
+        });
+        setValueTableCategories(newVC);
+        setValueTableData(newVD);
+      }
+
+      // 7. Offices
+      if (officesRes.data) {
+        const offices = officesRes.data.map((o: any) => ({
           ...o,
           specialties: safeParse(o.specialties, []),
           attendants: safeParse(o.attendants, []),
@@ -379,98 +418,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setOfficeData(offices);
       }
 
-      // Fetch Value Tables
-      const { data: vtcData } = await supabase.from('value_table_categories').select('*');
-      const { data: vtiData } = await supabase.from('value_table_items').select('*');
-      if (vtcData && vtiData) {
-        const newVC: Record<string, Category[]> = {};
-        const newVD: Record<string, Record<string, ValueTableItem[]>> = {};
+      // 8. Notices
+      if (noticesRes.data) setNoticeData(noticesRes.data);
 
-        vtcData.forEach((cat: any) => {
-          if (!newVC[cat.view_type]) newVC[cat.view_type] = [];
-          newVC[cat.view_type].push(cat);
-          newVD[cat.view_type] = newVD[cat.view_type] || {};
-          newVD[cat.view_type][cat.id] = [];
-        });
+      // 9. Attendants
+      if (deliveryRes.data) setExamDeliveryAttendants(deliveryRes.data);
 
-        vtiData.forEach((item: any) => {
-          const cat = vtcData.find((c: any) => c.id === item.category_id);
-          if (cat && newVD[cat.view_type]) {
-            // IMPORTANTE: Garantir que valores numéricos sejam números, não strings
-            const honorarios_parsed = safeParse(item.honorarios_diferenciados, []);
-            const honorarios_diferenciados = Array.isArray(honorarios_parsed)
-              ? honorarios_parsed.map((h: any) => ({
-                ...h,
-                valor: typeof h.valor === 'string' ? parseFloat(h.valor) : (h.valor || 0)
-              }))
-              : [];
-
-            const fixedItem = {
-              ...item,
-              honorario: typeof item.honorario === 'string' ? parseFloat(item.honorario) : (item.honorario || 0),
-              exame_cartao: typeof item.exame_cartao === 'string' ? parseFloat(item.exame_cartao) : (item.exame_cartao || 0),
-              material_min: typeof item.material_min === 'string' ? parseFloat(item.material_min) : (item.material_min || 0),
-              material_max: typeof item.material_max === 'string' ? parseFloat(item.material_max) : (item.material_max || 0),
-              honorarios_diferenciados: honorarios_diferenciados
-            };
-            newVD[cat.view_type][cat.id].push(fixedItem);
-          }
-        });
-        setValueTableCategories(newVC);
-        setValueTableData(newVD);
-      }
-
-      // Info and Estomaterapia (Shared logic)
-      const { data: itData } = await supabase.from('info_tags').select('*');
-      const { data: iiData } = await supabase.from('info_items').select('*');
-
-      if (itData && iiData) {
-        const iTags: InfoTag[] = [];
-        const eTags: InfoTag[] = [];
-        const iData: Record<string, InfoItem[]> = {};
-        const eData: Record<string, InfoItem[]> = {};
-
-        itData.forEach((tag: any) => {
-          if (tag.section_type === 'estomaterapia') {
-            eTags.push(tag);
-            eData[tag.id] = [];
-          } else {
-            iTags.push(tag);
-            iData[tag.id] = [];
-          }
-        });
-
-        iiData.forEach((item: any) => {
-          if (iData[item.tag_id]) iData[item.tag_id].push(item);
-          if (eData[item.tag_id]) eData[item.tag_id].push(item);
-        });
-
-        setInfoTags(iTags);
-        setInfoData(iData);
-        setEstomaterapiaTags(eTags);
-        setEstomaterapiaData(eData);
-      }
-
-      // Recados
-      const { data: rcData } = await supabase.from('recado_categories').select('*');
-      const { data: riData } = await supabase.from('recado_items').select('*');
-      if (rcData && riData) {
+      // 10. Recados
+      if (rcRes.data && riRes.data) {
         const newRcCats: RecadoCategory[] = [];
         const newRcData: Record<string, RecadoItem[]> = {};
-
-        rcData.forEach((cat: any) => {
-          const mappedCat = {
+        rcRes.data.forEach((cat: any) => {
+          newRcCats.push({
             id: cat.id,
             title: cat.title,
             description: cat.description,
             destinationType: cat.destination_type,
             groupName: cat.group_name
-          };
-          newRcCats.push(mappedCat);
+          });
           newRcData[cat.id] = [];
         });
-
-        riData.forEach((item: any) => {
+        riRes.data.forEach((item: any) => {
           if (newRcData[item.category_id]) {
             newRcData[item.category_id].push({
               ...item,
@@ -482,12 +450,36 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setRecadoData(newRcData);
       }
 
+      // 11. Info & Estomaterapia
+      if (itRes.data && iiRes.data) {
+        const iTags: InfoTag[] = [];
+        const eTags: InfoTag[] = [];
+        const iData: Record<string, InfoItem[]> = {};
+        const eData: Record<string, InfoItem[]> = {};
+
+        itRes.data.forEach((tag: any) => {
+          if (tag.section_type === 'estomaterapia') {
+            eTags.push(tag);
+            eData[tag.id] = [];
+          } else {
+            iTags.push(tag);
+            iData[tag.id] = [];
+          }
+        });
+
+        iiRes.data.forEach((item: any) => {
+          if (iData[item.tag_id]) iData[item.tag_id].push(item);
+          if (eData[item.tag_id]) eData[item.tag_id].push(item);
+        });
+        setInfoTags(iTags); setInfoData(iData); setEstomaterapiaTags(eTags); setEstomaterapiaData(eData);
+      }
 
     } catch (error) {
-      console.error('Error loading Supabase data:', error);
-      toast.error('Erro ao carregar do servidor. Testando backup local...');
-      loadFromLocalStorage(); // Fallback on error too
+      console.error("Erro CRITICO no carregamento paralelo (Supabase):", error);
+      loadFromLocalStorage();
+      toast.error("Erro de conexão. Tentando usar dados locais.");
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
