@@ -759,9 +759,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setScriptCategories(prev => ({ ...prev, [viewType]: prev[viewType].map(c => c.id === categoryId ? { ...c, ...updates } : c) }));
     supabase.from('script_categories').update({ ...updates }).eq('id', categoryId).then();
   };
-  const deleteScriptCategory = (viewType: string, categoryId: string) => {
+  const deleteScriptCategory = async (viewType: string, categoryId: string) => {
     setScriptCategories(prev => ({ ...prev, [viewType]: prev[viewType].filter(c => c.id !== categoryId) }));
-    supabase.from('script_categories').delete().eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('script_categories').delete().eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir categoria de script:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const reorderScriptCategories = () => { };
   const addScript = async (viewType: string, categoryId: string, script: ScriptItem) => {
@@ -780,12 +787,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     supabase.from('scripts').update(updates).eq('id', scriptId).then();
   };
-  const deleteScript = (viewType: string, categoryId: string, scriptId: string) => {
+  const deleteScript = async (viewType: string, categoryId: string, scriptId: string) => {
     setScriptData(prev => {
       const list = prev[viewType]?.[categoryId] || [];
       return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.filter(s => s.id !== scriptId) } };
     });
-    supabase.from('scripts').delete().eq('id', scriptId).then();
+    try {
+      const { error } = await supabase.from('scripts').delete().eq('id', scriptId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir script:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   // Exams
   const addExamCategory = async (category: Category) => {
@@ -796,9 +810,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setExamCategories(prev => prev.map(c => c.id === categoryId ? { ...c, ...updates } : c));
     supabase.from('exam_categories').update(updates).eq('id', categoryId).then();
   };
-  const deleteExamCategory = (categoryId: string) => {
+  const deleteExamCategory = async (categoryId: string) => {
     setExamCategories(prev => prev.filter(c => c.id !== categoryId));
-    supabase.from('exam_categories').delete().eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('exam_categories').delete().eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir categoria de exame:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const reorderExamCategories = () => { };
   const addExam = async (categoryId: string, exam: ExamItem) => {
@@ -813,9 +834,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (updates.schedulingRules !== undefined) { dbUpdates.scheduling_rules = updates.schedulingRules; delete dbUpdates.schedulingRules; }
     supabase.from('exams').update(dbUpdates).eq('id', examId).then();
   };
-  const deleteExam = (categoryId: string, examId: string) => {
+  const deleteExam = async (categoryId: string, examId: string) => {
     setExamData(prev => ({ ...prev, [categoryId]: (prev[categoryId] || []).filter(e => e.id !== examId) }));
-    supabase.from('exams').delete().eq('id', examId).then();
+    try {
+      const { error } = await supabase.from('exams').delete().eq('id', examId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir exame:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const syncValueTableToExams = () => { };
   // Contacts
@@ -827,9 +855,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setContactCategories(prev => ({ ...prev, [viewType]: prev[viewType].map(c => c.id === categoryId ? { ...c, ...updates } : c) }));
     supabase.from('contact_categories').update(updates).eq('id', categoryId).then();
   };
-  const deleteContactCategory = (viewType: string, categoryId: string) => {
+  const deleteContactCategory = async (viewType: string, categoryId: string) => {
     setContactCategories(prev => ({ ...prev, [viewType]: prev[viewType].filter(c => c.id !== categoryId) }));
-    supabase.from('contact_categories').delete().eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('contact_categories').delete().eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir categoria de contato:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const addContactGroup = async (viewType: string, categoryId: string, group: Omit<ContactGroup, 'id' | 'points'>) => {
     const newGroup = { ...group, id: crypto.randomUUID(), points: [] };
@@ -919,9 +954,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setNoticeData(prev => prev.map(n => n.id === notice.id ? notice : n));
     supabase.from('notices').update(notice).eq('id', notice.id).then();
   };
-  const deleteNotice = (id: string) => {
+  const deleteNotice = async (id: string) => {
     setNoticeData(prev => prev.filter(n => n.id !== id));
-    supabase.from('notices').delete().eq('id', id).then();
+    try {
+      const { error } = await supabase.from('notices').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir aviso:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   // Offices
   const addOffice = async (office: Omit<Office, 'id'>) => {
@@ -935,9 +977,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const dbOffice = { ...office, specialties: JSON.stringify(office.specialties), attendants: JSON.stringify(office.attendants), professionals: JSON.stringify(office.professionals), procedures: JSON.stringify(office.procedures), categories: JSON.stringify(office.categories), items: JSON.stringify(office.items) };
     supabase.from('offices').update(dbOffice).eq('id', office.id).then();
   };
-  const deleteOffice = (id: string) => {
+  const deleteOffice = async (id: string) => {
     setOfficeData(prev => prev.filter(o => o.id !== id));
-    supabase.from('offices').delete().eq('id', id).then();
+    try {
+      const { error } = await supabase.from('offices').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir consultório:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   // Value Tables
   const addValueCategory = async (viewType: string, category: Category) => {
@@ -948,9 +997,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setValueTableCategories(prev => ({ ...prev, [viewType]: prev[viewType].map(c => c.id === categoryId ? { ...c, ...updates } : c) }));
     supabase.from('value_table_categories').update(updates).eq('id', categoryId).then();
   };
-  const deleteValueCategory = (viewType: string, categoryId: string) => {
+  const deleteValueCategory = async (viewType: string, categoryId: string) => {
     setValueTableCategories(prev => ({ ...prev, [viewType]: prev[viewType].filter(c => c.id !== categoryId) }));
-    supabase.from('value_table_categories').delete().eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('value_table_categories').delete().eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir categoria de valores:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const reorderValueCategories = () => { };
   const addValueTable = async (viewType: string, categoryId: string, item: Omit<ValueTableItem, 'id'>) => {
@@ -959,9 +1015,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await supabase.from('value_table_items').insert({ id: newItem.id, category_id: categoryId, codigo: newItem.codigo, nome: newItem.nome, info: newItem.info, honorario: newItem.honorario, exame_cartao: newItem.exame_cartao, material_min: newItem.material_min, material_max: newItem.material_max, honorarios_diferenciados: JSON.stringify(newItem.honorarios_diferenciados) });
   };
   const moveAndUpdateValueTable = () => { };
-  const deleteValueTable = (viewType: string, categoryId: string, itemId: string) => {
-    setValueTableData(prev => { const list = prev[viewType]?.[categoryId] || []; return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.filter(i => i.id !== itemId) } }; });
-    supabase.from('value_table_items').delete().eq('id', itemId).then();
+  const deleteValueTable = async (viewType: string, categoryId: string, itemId: string) => {
+    setValueTableData(prev => {
+      const list = prev[viewType]?.[categoryId] || [];
+      return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.filter(i => i.id !== itemId) } };
+    });
+    try {
+      const { error } = await supabase.from('value_table_items').delete().eq('id', itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir item de valores:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   // Professional Stubs
   const addProfessional = () => { }; const updateProfessional = () => { }; const deleteProfessional = () => { };
@@ -975,9 +1041,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setRecadoCategories(prev => prev.map(c => c.id === category.id ? category : c));
     supabase.from('recado_categories').update({ title: category.title, description: category.description, destination_type: category.destinationType, group_name: category.groupName }).eq('id', category.id).then();
   };
-  const deleteRecadoCategory = (id: string) => {
+  const deleteRecadoCategory = async (id: string) => {
     setRecadoCategories(prev => prev.filter(c => c.id !== id));
-    supabase.from('recado_categories').delete().eq('id', id).then();
+    try {
+      const { error } = await supabase.from('recado_categories').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir categoria de recados:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const reorderRecadoCategories = () => { };
   const addRecadoItem = async (categoryId: string, item: Omit<RecadoItem, 'id'>) => {
@@ -991,9 +1064,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (updates.fields) dbUpdates.fields = JSON.stringify(updates.fields);
     supabase.from('recado_items').update(dbUpdates).eq('id', itemId).then();
   };
-  const deleteRecadoItem = (categoryId: string, itemId: string) => {
+  const deleteRecadoItem = async (categoryId: string, itemId: string) => {
     setRecadoData(prev => ({ ...prev, [categoryId]: (prev[categoryId] || []).filter(i => i.id !== itemId) }));
-    supabase.from('recado_items').delete().eq('id', itemId).then();
+    try {
+      const { error } = await supabase.from('recado_items').delete().eq('id', itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir recado:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   // Info & Estomaterapia
   const addInfoTagGeneric = async (tag: Omit<InfoTag, 'id'>, section: 'anotacoes' | 'estomaterapia', setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
@@ -1012,9 +1092,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTags(prev => prev.map(t => t.id === tag.id ? tag : t));
     supabase.from('info_tags').update({ name: tag.name, color: tag.color }).eq('id', tag.id).then();
   };
-  const deleteInfoTagGeneric = (tagId: string, setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
+  const deleteInfoTagGeneric = async (tagId: string, setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
     setTags(prev => prev.filter(t => t.id !== tagId));
-    supabase.from('info_tags').delete().eq('id', tagId).then();
+    try {
+      const { error } = await supabase.from('info_tags').delete().eq('id', tagId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir tag de informação:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const addInfoItemGeneric = async (item: Omit<InfoItem, 'id' | 'date'>, setData: React.Dispatch<React.SetStateAction<Record<string, InfoItem[]>>>) => {
     const newItem = { ...item, id: crypto.randomUUID(), date: new Date().toLocaleDateString('pt-BR') };
@@ -1044,7 +1131,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setInfoData(prev => ({ ...prev, [item.tagId]: prev[item.tagId].map(i => i.id === item.id ? item : i) }));
     supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();
   };
-  const deleteInfoItem = (itemId: string, tagId: string) => {
+  const deleteInfoItem = async (itemId: string, tagId: string) => {
     setInfoData(prev => {
       if (!prev || !prev[tagId]) return prev;
       return {
@@ -1052,9 +1139,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         [tagId]: prev[tagId].filter(i => i.id !== itemId)
       };
     });
-    supabase.from('info_items').delete().eq('id', itemId).then(({ error }) => {
-      if (error) toast.error("Erro ao sincronizar exclusão com o servidor.");
-    });
+    try {
+      const { error } = await supabase.from('info_items').delete().eq('id', itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir item de informação:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
   const addEstomaterapiaTag = (tag: Omit<InfoTag, 'id'>) => addInfoTagGeneric(tag, 'estomaterapia', setEstomaterapiaTags);
   const updateEstomaterapiaTag = (tag: InfoTag) => updateInfoTagGeneric(tag, setEstomaterapiaTags);
@@ -1068,14 +1160,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();
   };
-  const deleteEstomaterapiaItem = (itemId: string, tagId: string) => {
+  const deleteEstomaterapiaItem = async (itemId: string, tagId: string) => {
     setEstomaterapiaData(prev => {
       if (!prev || !prev[tagId]) return prev;
       return { ...prev, [tagId]: prev[tagId].filter(i => i.id !== itemId) };
     });
-    supabase.from('info_items').delete().eq('id', itemId).then(({ error }) => {
-      if (error) toast.error("Erro ao sincronizar exclusão com o servidor.");
-    });
+    try {
+      const { error } = await supabase.from('info_items').delete().eq('id', itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir item de estomaterapia:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
 
   // Stubs
