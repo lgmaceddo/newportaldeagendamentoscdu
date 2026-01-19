@@ -56,7 +56,7 @@ export const AnotacoesContent = ({
   const [editingItem, setEditingItem] = useState<InfoItem | undefined>();
   const [editingTag, setEditingTag] = useState<InfoTag | undefined>();
   const [viewingItem, setViewingItem] = useState<{ item: InfoItem, tag: InfoTag | undefined } | null>(null);
-  
+
   // Usa as funções injetadas ou as funções padrão do useData
   const dataContext = useData();
   const addTag = onAddTag || dataContext.addInfoTag;
@@ -65,37 +65,37 @@ export const AnotacoesContent = ({
   const addItem = onAddItem || dataContext.addInfoItem;
   const updateItem = onUpdateItem || dataContext.updateInfoItem;
   const deleteItem = onDeleteItem || dataContext.deleteInfoItem;
-  
+
   // Funções de reordenação específicas
-  const reorderTags = isEstomaterapia 
-    ? dataContext.reorderEstomaterapiaTags 
+  const reorderTags = isEstomaterapia
+    ? dataContext.reorderEstomaterapiaTags
     : dataContext.reorderInfoTags;
-    
+
   const { hasUnsavedChanges, saveToLocalStorage } = dataContext;
   const { toast } = useToast();
 
   // Check for search result in location state
   useEffect(() => {
     const searchType = isEstomaterapia ? 'estomaterapia' : 'info';
-    
+
     if (location.state?.searchResult?.type === searchType) {
       const tagId = location.state.searchResult.tagId;
       const itemId = location.state.searchResult.itemId;
-      
+
       // Set the correct tag
       if (tagId) {
         setActiveTagId(tagId);
       }
-      
+
       // Find and view the specific item
       const tagItems = data[tagId] || [];
       const item = tagItems.find(i => i.id === itemId);
       const tag = tags.find(t => t.id === tagId);
-      
+
       if (item && tag) {
         setViewingItem({ item, tag });
         setDetailsModalOpen(true);
-        
+
         // Clear the location state to prevent re-triggering
         window.history.replaceState({}, document.title, location.pathname);
       }
@@ -115,8 +115,7 @@ export const AnotacoesContent = ({
   const getTagById = (tagId: string) => tags.find(t => t.id === tagId);
 
   // Consolida todos os itens para a busca
-  // Estrutura: { item: InfoItem, tag: InfoTag | undefined }
-  const allItems: (InfoItem & { tag: InfoTag | undefined })[] = sortedTags.flatMap(tag => 
+  const allItems: { item: InfoItem; tag: InfoTag | undefined }[] = sortedTags.flatMap(tag =>
     (data[tag.id] || []).map(item => ({ item, tag }))
   );
 
@@ -313,21 +312,23 @@ export const AnotacoesContent = ({
               </p>
             </div>
             <div className="flex items-center space-x-3">
-              <Button
-                onClick={() => {
-                  saveToLocalStorage();
-                  toast({
-                    title: "Dados salvos",
-                    description: "Todas as alterações foram salvas com sucesso!",
-                  });
-                }}
-                size="icon"
-                variant={hasUnsavedChanges ? "default" : "outline"}
-                title={hasUnsavedChanges ? "Salvar Alterações" : "Tudo Salvo"}
-                className="h-9 w-9"
-              >
-                <Save className="h-4 w-4" />
-              </Button>
+              {canEditAnotacoes && (
+                <Button
+                  onClick={() => {
+                    saveToLocalStorage();
+                    toast({
+                      title: "Dados salvos",
+                      description: "Todas as alterações foram salvas com sucesso!",
+                    });
+                  }}
+                  size="icon"
+                  variant={hasUnsavedChanges ? "default" : "outline"}
+                  title={hasUnsavedChanges ? "Salvar Alterações" : "Tudo Salvo"}
+                  className="h-9 w-9"
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+              )}
               {canEditAnotacoes && (
                 <>
                   <Button
@@ -349,15 +350,27 @@ export const AnotacoesContent = ({
           </div>
           {tags.length > 0 && !searchTerm && (
             <div className="border-b border-border pb-2">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Arraste para reordenar as etiquetas:</h3>
-              <SortableList
-                items={tags}
-                onReorder={handleReorderCategories}
-                renderItem={(tag) => renderTagButton(tag)}
-                className="flex flex-wrap gap-2 items-start"
-                itemClassName="flex-shrink-0 w-auto"
-                handleClassName="left-0"
-              />
+              {canEditAnotacoes ? (
+                <>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Arraste para reordenar as etiquetas:</h3>
+                  <SortableList
+                    items={tags}
+                    onReorder={handleReorderCategories}
+                    renderItem={(tag) => renderTagButton(tag)}
+                    className="flex flex-wrap gap-2 items-start"
+                    itemClassName="flex-shrink-0 w-auto"
+                    handleClassName="left-0"
+                  />
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2 items-start">
+                  {tags.map((tag) => (
+                    <div key={tag.id} className="flex-shrink-0 w-auto">
+                      {renderTagButton(tag)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -407,8 +420,8 @@ export const AnotacoesContent = ({
                   {searchTerm
                     ? "Nenhuma anotação encontrada."
                     : tags.length === 0
-                    ? "Crie uma etiqueta primeiro usando 'Gerenciar Etiquetas'."
-                    : `Nenhuma anotação cadastrada na etiqueta ${sortedTags.find(t => t.id === activeTagId)?.name || 'selecionada'}.`
+                      ? "Crie uma etiqueta primeiro usando 'Gerenciar Etiquetas'."
+                      : `Nenhuma anotação cadastrada na etiqueta ${sortedTags.find(t => t.id === activeTagId)?.name || 'selecionada'}.`
                   }
                 </p>
               </div>
