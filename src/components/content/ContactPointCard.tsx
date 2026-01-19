@@ -38,28 +38,16 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
 
   return (
     <div className="border rounded-lg bg-card shadow-sm p-3 hover:shadow-md transition-shadow duration-200 group">
-      {/* Layout Grid para Desktop - Colunas fixas e compactas para aproximar as informações */}
-      {/* Nome (220px) | Local (140px) | Ramal (100px) | Telefone (160px) | Espaço Vazio (Flex) | Ações */}
-      <div className="grid grid-cols-1 md:grid-cols-[220px_140px_100px_160px_1fr_auto] gap-2 items-center">
+      {/* Layout Grid para Desktop */}
+      {/* Nome (320px ~35chars) | Ramal (Auto - mostra tudo) | Telefone (160px) | Espaço Vazio (Flex) | Ações */}
+      <div className="grid grid-cols-1 md:grid-cols-[320px_auto_160px_1fr_auto] gap-2 items-center">
 
         {/* 1. Nome do Ponto (Setor) */}
         <div className="font-semibold text-sm text-foreground truncate" title={point.setor}>
           {point.setor}
         </div>
 
-        {/* 2. Local */}
-        <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5" title={point.local || ''}>
-          {point.local ? (
-            <>
-              <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
-              <span>{point.local}</span>
-            </>
-          ) : (
-            <span className="opacity-0">-</span> // Mantém altura/alinhamento se vazio
-          )}
-        </div>
-
-        {/* 3. Ramal */}
+        {/* 2. Ramal (Mostra tudo) */}
         <div className="text-xs truncate flex items-center gap-1.5" title={point.ramal ? `Ramal: ${point.ramal}` : ''}>
           {point.ramal ? (
             <>
@@ -73,7 +61,7 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
           )}
         </div>
 
-        {/* 4. Telefone / WhatsApp */}
+        {/* 3. Telefone / WhatsApp */}
         <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
           {point.whatsapp ? (
             <div className="flex items-center gap-1 text-green-600 font-medium" title="WhatsApp">
@@ -89,6 +77,9 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
             <span className="opacity-0">-</span>
           )}
         </div>
+
+        {/* 4. Espaçador (preenche vazio para empurrar ações para a direita) */}
+        <div className="hidden md:block"></div>
 
         {/* 5. Ações */}
         <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -126,11 +117,11 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
         </div>
       </div>
 
-      {/* Descrição em linha separada e largura total */}
+      {/* Descrição em linha separada e largura total - Respeitando quebras de linha */}
       {point.description && (
-        <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground italic pl-1 flex items-start gap-2">
-          <span className="text-primary/50 text-[10px] uppercase font-bold tracking-wider mt-0.5">Nota:</span>
-          {point.description}
+        <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground italic pl-1 flex items-start gap-2 whitespace-pre-wrap">
+          <span className="text-primary/50 text-[10px] uppercase font-bold tracking-wider mt-0.5 select-none">Nota:</span>
+          <span>{point.description}</span>
         </div>
       )}
     </div>
