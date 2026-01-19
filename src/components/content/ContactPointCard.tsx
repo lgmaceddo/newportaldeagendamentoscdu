@@ -38,8 +38,9 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
 
   return (
     <div className="border rounded-lg bg-card shadow-sm p-3 hover:shadow-md transition-shadow duration-200 group">
-      {/* Layout Grid para Desktop - Alinhamento Perfeito */}
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(200px,2fr)_minmax(120px,1fr)_minmax(100px,0.8fr)_minmax(140px,1.2fr)_auto] gap-2 md:gap-4 items-center">
+      {/* Layout Grid para Desktop - Colunas fixas e compactas para aproximar as informações */}
+      {/* Nome (220px) | Local (140px) | Ramal (100px) | Telefone (160px) | Espaço Vazio (Flex) | Ações */}
+      <div className="grid grid-cols-1 md:grid-cols-[220px_140px_100px_160px_1fr_auto] gap-2 items-center">
 
         {/* 1. Nome do Ponto (Setor) */}
         <div className="font-semibold text-sm text-foreground truncate" title={point.setor}>
