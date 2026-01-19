@@ -268,6 +268,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const pDelivery = supabase.from('exam_delivery_attendants').select('*');
       const pRecados = Promise.all([supabase.from('recado_categories').select('*'), supabase.from('recado_items').select('*')]);
       const pInfo = Promise.all([supabase.from('info_tags').select('*'), supabase.from('info_items').select('*')]);
+      const pProfessionals = supabase.from('professionals').select('*');
 
       // Execução Paralela - Dispara tudo de uma vez
       const [
@@ -281,9 +282,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         noticesRes,
         deliveryRes,
         [rcRes, riRes],
-        [itRes, iiRes]
+        [itRes, iiRes],
+        profsRes
       ] = await Promise.all([
-        pProfile, pHeaderTags, pScripts, pExams, pContacts, pValues, pOffices, pNotices, pDelivery, pRecados, pInfo
+        pProfile, pHeaderTags, pScripts, pExams, pContacts, pValues, pOffices, pNotices, pDelivery, pRecados, pInfo, pProfessionals
       ]);
 
       // --- PROCESSAMENTO DOS DADOS ---
@@ -475,6 +477,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setInfoTags(iTags); setInfoData(iData); setEstomaterapiaTags(eTags); setEstomaterapiaData(eData);
       }
 
+      // 12. Professionals
+      if (profsRes.data) {
+        const newPD: Record<string, Record<string, Professional[]>> = {};
+        profsRes.data.forEach((prof: any) => {
+          if (!newPD[prof.view_type]) newPD[prof.view_type] = {};
+          if (!newPD[prof.view_type][prof.category_id]) newPD[prof.view_type][prof.category_id] = [];
+          newPD[prof.view_type][prof.category_id].push({
+            ...prof,
+            ageRange: prof.age_range,
+            generalObs: prof.general_obs,
+            fittings: safeParse(prof.fittings, []),
+            performedExams: safeParse(prof.performed_exams, [])
+          });
+        });
+        setProfessionalData(newPD);
+      }
+
     } catch (error) {
       console.error("Erro CRITICO no carregamento paralelo (Supabase):", error);
       loadFromLocalStorage();
@@ -511,6 +530,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await clearTable('value_table_items');
       await clearTable('recado_items');
       await clearTable('info_items');
+      await clearTable('professionals'); // Added professionals
 
       // 2. Delete Parent/Standalone Tables
       await clearTable('script_categories');
@@ -522,6 +542,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await clearTable('notices');
       await clearTable('offices');
       await clearTable('header_tags');
+      await clearTable('exam_delivery_attendants'); // Added exam_delivery_attendants
 
       console.log("Existing data cleared. Starting insertion...");
 
@@ -723,6 +744,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
+      // 10. Exam Delivery Attendants
+      if (parsed.examDeliveryAttendants) {
+        for (const attendant of parsed.examDeliveryAttendants) {
+          await supabase.from('exam_delivery_attendants').insert({
+            id: crypto.randomUUID(), name: attendant.name, email: attendant.email, phone: attendant.phone
+          });
+        }
+      }
+
+      // 11. Professionals
+      if (parsed.professionalData) {
+        for (const viewType in parsed.professionalData) {
+          for (const categoryId in parsed.professionalData[viewType]) {
+            const professionals = parsed.professionalData[viewType][categoryId];
+            for (const prof of professionals) {
+              await supabase.from('professionals').insert({
+                id: crypto.randomUUID(),
+                category_id: categoryId,
+                view_type: viewType,
+                name: prof.name,
+                gender: prof.gender,
+                specialty: prof.specialty,
+                age_range: prof.ageRange,
+                fittings: JSON.stringify(prof.fittings),
+                general_obs: prof.generalObs,
+                performed_exams: JSON.stringify(prof.performedExams)
+              });
+            }
+          }
+        }
+      }
+
       toast.success("Migração concluída com sucesso! Recarregando...");
       setTimeout(() => window.location.reload(), 1500);
       return true;
@@ -735,14 +788,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Legacy support functions
-  const saveToLocalStorage = () => { toast.info("Salvamento agora é automático no servidor!"); };
+  const saveToLocalStorage = async () => {
+    // Sincronização agora é automática em cada ação CRUD.
+    // Mantemos apenas para compatibilidade com o botão da UI.
+    toast.success("Dados sincronizados com sucesso!");
+  };
   const exportAllData = () => {
     // Can build a JSON string from current state for backup
     const state = {
       scriptCategories, scriptData, examCategories, examData,
       contactCategories, contactData, valueTableCategories, valueTableData,
       professionalData, officeData, noticeData,
-      infoTags, infoData, estomaterapiaTags, estomaterapiaData, recadoCategories, recadoData
+      infoTags, infoData, estomaterapiaTags, estomaterapiaData, recadoCategories, recadoData,
+      examDeliveryAttendants // Added examDeliveryAttendants to export
     };
     return JSON.stringify(state, null, 2);
   };
@@ -754,11 +812,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Scripts
   const addScriptCategory = async (viewType: string, category: Category) => {
     setScriptCategories(prev => ({ ...prev, [viewType]: [...(prev[viewType] || []), category] }));
-    await supabase.from('script_categories').insert({ id: category.id, view_type: viewType, name: category.name, color: category.color });
+    try {
+      const { error } = await supabase.from('script_categories').insert({ id: category.id, view_type: viewType, name: category.name, color: category.color });
+      if (error) throw error;
+      toast.success("Categoria de script adicionada!");
+    } catch (error) {
+      console.error("Erro ao adicionar categoria de script:", error);
+      toast.error("Erro ao salvar no servidor. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateScriptCategory = (viewType: string, categoryId: string, updates: Partial<Category>) => {
+  const updateScriptCategory = async (viewType: string, categoryId: string, updates: Partial<Category>) => {
     setScriptCategories(prev => ({ ...prev, [viewType]: prev[viewType].map(c => c.id === categoryId ? { ...c, ...updates } : c) }));
-    supabase.from('script_categories').update({ ...updates }).eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('script_categories').update({ ...updates }).eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar categoria de script:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteScriptCategory = async (viewType: string, categoryId: string) => {
     setScriptCategories(prev => ({ ...prev, [viewType]: prev[viewType].filter(c => c.id !== categoryId) }));
@@ -771,7 +843,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loadAllDataFromSupabase();
     }
   };
-  const reorderScriptCategories = () => { };
+  const reorderScriptCategories = async (viewType: string, oldIndex: number, newIndex: number) => {
+    const categories = scriptCategories[viewType] || [];
+    const newCategories = arrayMove(categories, oldIndex, newIndex);
+
+    setScriptCategories(prev => ({
+      ...prev,
+      [viewType]: newCategories
+    }));
+
+    try {
+      const updates = newCategories.map((cat, index) =>
+        supabase.from('script_categories').update({ order: index }).eq('id', cat.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar categorias de script:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
+  };
   const addScript = async (viewType: string, categoryId: string, script: ScriptItem) => {
     setScriptData(prev => {
       const newData = { ...prev };
@@ -779,14 +869,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       newData[viewType][categoryId] = [...(newData[viewType][categoryId] || []), script];
       return newData;
     });
-    await supabase.from('scripts').insert({ id: script.id, category_id: categoryId, title: script.title, content: script.content, order: script.order });
+    try {
+      const { error } = await supabase.from('scripts').insert({ id: script.id, category_id: categoryId, title: script.title, content: script.content, order: script.order });
+      if (error) throw error;
+      toast.success("Script adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar script:", error);
+      toast.error("Erro ao salvar no servidor. Recarregando...");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateScript = (viewType: string, categoryId: string, scriptId: string, updates: Partial<ScriptItem>) => {
+  const updateScript = async (viewType: string, categoryId: string, scriptId: string, updates: Partial<ScriptItem>) => {
     setScriptData(prev => {
       const list = prev[viewType]?.[categoryId] || [];
       return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.map(s => s.id === scriptId ? { ...s, ...updates } : s) } };
     });
-    supabase.from('scripts').update(updates).eq('id', scriptId).then();
+    try {
+      const { error } = await supabase.from('scripts').update(updates).eq('id', scriptId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar script:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteScript = async (viewType: string, categoryId: string, scriptId: string) => {
     setScriptData(prev => {
@@ -805,11 +909,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Exams
   const addExamCategory = async (category: Category) => {
     setExamCategories(prev => [...prev, category]);
-    await supabase.from('exam_categories').insert({ id: category.id, name: category.name, color: category.color, order: category.order });
+    try {
+      const { error } = await supabase.from('exam_categories').insert({ id: category.id, name: category.name, color: category.color, order: category.order });
+      if (error) throw error;
+      toast.success("Categoria de exame adicionada!");
+    } catch (error) {
+      console.error("Erro ao adicionar categoria de exame:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateExamCategory = (categoryId: string, updates: Partial<Category>) => {
+  const updateExamCategory = async (categoryId: string, updates: Partial<Category>) => {
     setExamCategories(prev => prev.map(c => c.id === categoryId ? { ...c, ...updates } : c));
-    supabase.from('exam_categories').update(updates).eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('exam_categories').update(updates).eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar categoria de exame:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteExamCategory = async (categoryId: string) => {
     setExamCategories(prev => prev.filter(c => c.id !== categoryId));
@@ -818,22 +936,50 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
     } catch (error) {
       console.error("Erro ao excluir categoria de exame:", error);
-      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      toast.error("Erro ao sincronizar exclusão.");
       loadAllDataFromSupabase();
     }
   };
-  const reorderExamCategories = () => { };
+  const reorderExamCategories = async (oldIndex: number, newIndex: number) => {
+    const newCategories = arrayMove(examCategories, oldIndex, newIndex);
+    setExamCategories(newCategories);
+
+    try {
+      const updates = newCategories.map((cat, index) =>
+        supabase.from('exam_categories').update({ order: index }).eq('id', cat.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar categorias de exame:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
+  };
   const addExam = async (categoryId: string, exam: ExamItem) => {
     setExamData(prev => ({ ...prev, [categoryId]: [...(prev[categoryId] || []), exam] }));
-    await supabase.from('exams').insert({ id: exam.id, category_id: categoryId, title: exam.title, location: JSON.stringify(exam.location), additional_info: exam.additionalInfo, scheduling_rules: exam.schedulingRules });
+    try {
+      const { error } = await supabase.from('exams').insert({ id: exam.id, category_id: categoryId, title: exam.title, location: JSON.stringify(exam.location), additional_info: exam.additionalInfo, scheduling_rules: exam.schedulingRules });
+      if (error) throw error;
+      toast.success("Exame adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar exame:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateExam = (categoryId: string, examId: string, updates: Partial<ExamItem>) => {
+  const updateExam = async (categoryId: string, examId: string, updates: Partial<ExamItem>) => {
     setExamData(prev => ({ ...prev, [categoryId]: (prev[categoryId] || []).map(e => e.id === examId ? { ...e, ...updates } : e) }));
     const dbUpdates: any = { ...updates };
     if (updates.location) dbUpdates.location = JSON.stringify(updates.location);
     if (updates.additionalInfo !== undefined) { dbUpdates.additional_info = updates.additionalInfo; delete dbUpdates.additionalInfo; }
     if (updates.schedulingRules !== undefined) { dbUpdates.scheduling_rules = updates.schedulingRules; delete dbUpdates.schedulingRules; }
-    supabase.from('exams').update(dbUpdates).eq('id', examId).then();
+
+    try {
+      const { error } = await supabase.from('exams').update(dbUpdates).eq('id', examId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar exame:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteExam = async (categoryId: string, examId: string) => {
     setExamData(prev => ({ ...prev, [categoryId]: (prev[categoryId] || []).filter(e => e.id !== examId) }));
@@ -850,11 +996,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Contacts
   const addContactCategory = async (viewType: string, category: Category) => {
     setContactCategories(prev => ({ ...prev, [viewType]: [...(prev[viewType] || []), category] }));
-    await supabase.from('contact_categories').insert({ id: category.id, view_type: viewType, name: category.name, color: category.color });
+    try {
+      const { error } = await supabase.from('contact_categories').insert({ id: category.id, view_type: viewType, name: category.name, color: category.color, order: category.order || 0 });
+      if (error) throw error;
+      toast.success("Categoria de contato adicionada!");
+    } catch (error) {
+      console.error("Erro ao adicionar categoria de contato:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateContactCategory = (viewType: string, categoryId: string, updates: Partial<Category>) => {
+  const updateContactCategory = async (viewType: string, categoryId: string, updates: Partial<Category>) => {
     setContactCategories(prev => ({ ...prev, [viewType]: prev[viewType].map(c => c.id === categoryId ? { ...c, ...updates } : c) }));
-    supabase.from('contact_categories').update(updates).eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('contact_categories').update(updates).eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar categoria de contato:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteContactCategory = async (viewType: string, categoryId: string) => {
     setContactCategories(prev => ({ ...prev, [viewType]: prev[viewType].filter(c => c.id !== categoryId) }));
@@ -863,31 +1023,53 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
     } catch (error) {
       console.error("Erro ao excluir categoria de contato:", error);
-      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      toast.error("Erro ao sincronizar exclusão.");
       loadAllDataFromSupabase();
     }
   };
 
-  const reorderContactCategories = (viewType: string, oldIndex: number, newIndex: number) => {
-    setContactCategories((prev) => {
-      const categories = prev[viewType] || [];
-      const newCategories = arrayMove(categories, oldIndex, newIndex);
-      return {
-        ...prev,
-        [viewType]: newCategories
-      };
-    });
-    // TODO: Adicionar persistência no Supabase quando a coluna 'order' for garantida nas tabelas de categoria
+  const reorderContactCategories = async (viewType: string, oldIndex: number, newIndex: number) => {
+    const categories = contactCategories[viewType] || [];
+    const newCategories = arrayMove(categories, oldIndex, newIndex);
+
+    setContactCategories(prev => ({
+      ...prev,
+      [viewType]: newCategories
+    }));
+
+    try {
+      const updates = newCategories.map((cat, index) =>
+        supabase.from('contact_categories').update({ order: index }).eq('id', cat.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar categorias de contato:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
   };
 
   const addContactGroup = async (viewType: string, categoryId: string, group: Omit<ContactGroup, 'id' | 'points'>) => {
     const newGroup = { ...group, id: crypto.randomUUID(), points: [] };
     setContactData(prev => { const newData = { ...prev }; newData[viewType] = newData[viewType] || {}; newData[viewType][categoryId] = [...(newData[viewType][categoryId] || []), newGroup]; return newData; });
-    await supabase.from('contact_groups').insert({ id: newGroup.id, category_id: categoryId, name: group.name });
+    try {
+      const { error } = await supabase.from('contact_groups').insert({ id: newGroup.id, category_id: categoryId, name: group.name });
+      if (error) throw error;
+      toast.success("Grupo de contatos adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar grupo:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateContactGroup = (viewType: string, categoryId: string, groupId: string, updates: Partial<ContactGroup>) => {
+  const updateContactGroup = async (viewType: string, categoryId: string, groupId: string, updates: Partial<ContactGroup>) => {
     setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: list.map(g => g.id === groupId ? { ...g, ...updates } : g) } }; });
-    supabase.from('contact_groups').update({ name: updates.name }).eq('id', groupId).then();
+    try {
+      const { error } = await supabase.from('contact_groups').update({ name: updates.name }).eq('id', groupId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar grupo:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteContactGroup = async (viewType: string, categoryId: string, groupId: string) => {
     // Optimistic Update
@@ -916,12 +1098,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addContactPoint = async (viewType: string, categoryId: string, groupId: string, point: Omit<ContactPoint, 'id'>) => {
     const newPoint = { ...point, id: crypto.randomUUID() };
     setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; const updatedList = list.map(g => g.id === groupId ? { ...g, points: [...g.points, newPoint] } : g); return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: updatedList } }; });
-    await supabase.from('contact_points').insert({ id: newPoint.id, group_id: groupId, setor: newPoint.setor, local: newPoint.local, ramal: newPoint.ramal, telefone: newPoint.telefone, whatsapp: newPoint.whatsapp, description: newPoint.description });
+    try {
+      const { error } = await supabase.from('contact_points').insert({ id: newPoint.id, group_id: groupId, setor: newPoint.setor, local: newPoint.local, ramal: newPoint.ramal, telefone: newPoint.telefone, whatsapp: newPoint.whatsapp, description: newPoint.description });
+      if (error) throw error;
+      toast.success("Ponto de contato adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar ponto:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
 
-  const updateContactPoint = (viewType: string, categoryId: string, groupId: string, pointId: string, updates: Partial<ContactPoint>) => {
+  const updateContactPoint = async (viewType: string, categoryId: string, groupId: string, pointId: string, updates: Partial<ContactPoint>) => {
     setContactData(prev => { const list = prev[viewType]?.[categoryId] || []; const updatedList = list.map(g => g.id === groupId ? { ...g, points: g.points.map(p => p.id === pointId ? { ...p, ...updates } : p) } : g); return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: updatedList } }; });
-    supabase.from('contact_points').update(updates).eq('id', pointId).then();
+    try {
+      const { error } = await supabase.from('contact_points').update(updates).eq('id', pointId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar ponto:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
 
   const deleteContactPoint = async (viewType: string, categoryId: string, groupId: string, pointId: string) => {
@@ -962,11 +1158,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addNotice = async (notice: Omit<Notice, 'id'>) => {
     const newNotice = { ...notice, id: crypto.randomUUID() };
     setNoticeData(prev => [...prev, newNotice]);
-    await supabase.from('notices').insert(newNotice);
+    try {
+      const { error } = await supabase.from('notices').insert(newNotice);
+      if (error) throw error;
+      toast.success("Aviso adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar aviso:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateNotice = (notice: Notice) => {
+  const updateNotice = async (notice: Notice) => {
     setNoticeData(prev => prev.map(n => n.id === notice.id ? notice : n));
-    supabase.from('notices').update(notice).eq('id', notice.id).then();
+    try {
+      const { error } = await supabase.from('notices').update(notice).eq('id', notice.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar aviso:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteNotice = async (id: string) => {
     setNoticeData(prev => prev.filter(n => n.id !== id));
@@ -984,12 +1194,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const newOffice = { ...office, id: crypto.randomUUID() };
     setOfficeData(prev => [...prev, newOffice]);
     const dbOffice = { ...newOffice, specialties: JSON.stringify(newOffice.specialties), attendants: JSON.stringify(newOffice.attendants), professionals: JSON.stringify(newOffice.professionals), procedures: JSON.stringify(newOffice.procedures), categories: JSON.stringify(newOffice.categories), items: JSON.stringify(newOffice.items) };
-    await supabase.from('offices').insert(dbOffice);
+    try {
+      const { error } = await supabase.from('offices').insert(dbOffice);
+      if (error) throw error;
+      toast.success("Consultório adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar consultório:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateOffice = (office: Office) => {
+  const updateOffice = async (office: Office) => {
     setOfficeData(prev => prev.map(o => o.id === office.id ? office : o));
     const dbOffice = { ...office, specialties: JSON.stringify(office.specialties), attendants: JSON.stringify(office.attendants), professionals: JSON.stringify(office.professionals), procedures: JSON.stringify(office.procedures), categories: JSON.stringify(office.categories), items: JSON.stringify(office.items) };
-    supabase.from('offices').update(dbOffice).eq('id', office.id).then();
+    try {
+      const { error } = await supabase.from('offices').update(dbOffice).eq('id', office.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar consultório:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteOffice = async (id: string) => {
     setOfficeData(prev => prev.filter(o => o.id !== id));
@@ -1005,11 +1229,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Value Tables
   const addValueCategory = async (viewType: string, category: Category) => {
     setValueTableCategories(prev => ({ ...prev, [viewType]: [...(prev[viewType] || []), category] }));
-    await supabase.from('value_table_categories').insert({ id: category.id, view_type: viewType, name: category.name, color: category.color, order: category.order });
+    try {
+      const { error } = await supabase.from('value_table_categories').insert({ id: category.id, view_type: viewType, name: category.name, color: category.color, order: category.order });
+      if (error) throw error;
+      toast.success("Categoria de valores adicionada!");
+    } catch (error) {
+      console.error("Erro ao adicionar categoria de valores:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateValueCategory = (viewType: string, categoryId: string, updates: Partial<Category>) => {
+  const updateValueCategory = async (viewType: string, categoryId: string, updates: Partial<Category>) => {
     setValueTableCategories(prev => ({ ...prev, [viewType]: prev[viewType].map(c => c.id === categoryId ? { ...c, ...updates } : c) }));
-    supabase.from('value_table_categories').update(updates).eq('id', categoryId).then();
+    try {
+      const { error } = await supabase.from('value_table_categories').update(updates).eq('id', categoryId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar categoria de valores:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteValueCategory = async (viewType: string, categoryId: string) => {
     setValueTableCategories(prev => ({ ...prev, [viewType]: prev[viewType].filter(c => c.id !== categoryId) }));
@@ -1018,15 +1256,41 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
     } catch (error) {
       console.error("Erro ao excluir categoria de valores:", error);
-      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      toast.error("Erro ao sincronizar exclusão.");
       loadAllDataFromSupabase();
     }
   };
-  const reorderValueCategories = () => { };
+  const reorderValueCategories = async (viewType: string, oldIndex: number, newIndex: number) => {
+    const categories = valueTableCategories[viewType] || [];
+    const newCategories = arrayMove(categories, oldIndex, newIndex);
+
+    setValueTableCategories(prev => ({
+      ...prev,
+      [viewType]: newCategories
+    }));
+
+    try {
+      const updates = newCategories.map((cat, index) =>
+        supabase.from('value_table_categories').update({ order: index }).eq('id', cat.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar categorias de valores:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
+  };
   const addValueTable = async (viewType: string, categoryId: string, item: Omit<ValueTableItem, 'id'>) => {
     const newItem = { ...item, id: crypto.randomUUID() };
     setValueTableData(prev => { const list = prev[viewType]?.[categoryId] || []; return { ...prev, [viewType]: { ...prev[viewType], [categoryId]: [...list, newItem] } }; });
-    await supabase.from('value_table_items').insert({ id: newItem.id, category_id: categoryId, codigo: newItem.codigo, nome: newItem.nome, info: newItem.info, honorario: newItem.honorario, exame_cartao: newItem.exame_cartao, material_min: newItem.material_min, material_max: newItem.material_max, honorarios_diferenciados: JSON.stringify(newItem.honorarios_diferenciados) });
+    try {
+      const { error } = await supabase.from('value_table_items').insert({ id: newItem.id, category_id: categoryId, codigo: newItem.codigo, nome: newItem.nome, info: newItem.info, honorario: newItem.honorario, exame_cartao: newItem.exame_cartao, material_min: newItem.material_min, material_max: newItem.material_max, honorarios_diferenciados: JSON.stringify(newItem.honorarios_diferenciados) });
+      if (error) throw error;
+      toast.success("Item de valores adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar item de valores:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
   const moveAndUpdateValueTable = () => { };
   const deleteValueTable = async (viewType: string, categoryId: string, itemId: string) => {
@@ -1044,16 +1308,132 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   // Professional Stubs
-  const addProfessional = () => { }; const updateProfessional = () => { }; const deleteProfessional = () => { };
+  const addProfessional = async (viewType: string, categoryId: string, professional: Omit<Professional, 'id'>) => {
+    const newProf = { ...professional, id: crypto.randomUUID() };
+    setProfessionalData(prev => {
+      const v = prev[viewType] || {};
+      const c = v[categoryId] || [];
+      return { ...prev, [viewType]: { ...v, [categoryId]: [...c, newProf] } };
+    });
+    try {
+      const { error } = await supabase.from('professionals').insert({
+        id: newProf.id,
+        category_id: categoryId,
+        view_type: viewType,
+        name: professional.name,
+        gender: professional.gender,
+        specialty: professional.specialty,
+        age_range: professional.ageRange,
+        fittings: JSON.stringify(professional.fittings),
+        general_obs: professional.generalObs,
+        performed_exams: JSON.stringify(professional.performedExams)
+      });
+      if (error) throw error;
+      toast.success("Profissional adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar profissional:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
+  };
+
+  const updateProfessional = async (viewType: string, categoryId: string, profId: string, updates: Partial<Professional>) => {
+    setProfessionalData(prev => {
+      const v = prev[viewType] || {};
+      const c = v[categoryId] || [];
+      return { ...prev, [viewType]: { ...v, [categoryId]: c.map(p => p.id === profId ? { ...p, ...updates } : p) } };
+    });
+    const dbUpdates: any = {};
+    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.gender) dbUpdates.gender = updates.gender;
+    if (updates.specialty) dbUpdates.specialty = updates.specialty;
+    if (updates.ageRange) dbUpdates.age_range = updates.ageRange;
+    if (updates.fittings) dbUpdates.fittings = JSON.stringify(updates.fittings);
+    if (updates.generalObs !== undefined) dbUpdates.general_obs = updates.generalObs;
+    if (updates.performedExams) dbUpdates.performed_exams = JSON.stringify(updates.performedExams);
+
+    try {
+      const { error } = await supabase.from('professionals').update(dbUpdates).eq('id', profId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar profissional:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
+  };
+
+  const deleteProfessional = async (viewType: string, categoryId: string, profId: string) => {
+    setProfessionalData(prev => {
+      const v = prev[viewType] || {};
+      const c = v[categoryId] || [];
+      return { ...prev, [viewType]: { ...v, [categoryId]: c.filter(p => p.id !== profId) } };
+    });
+    try {
+      const { error } = await supabase.from('professionals').delete().eq('id', profId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir profissional:", error);
+      toast.error("Erro ao sincronizar exclusão.");
+      loadAllDataFromSupabase();
+    }
+  };
+  // Exam Delivery Attendants
+  const addExamDeliveryAttendant = async (attendant: Omit<ExamDeliveryAttendant, 'id'>) => {
+    const newAttendant = { ...attendant, id: crypto.randomUUID() };
+    setExamDeliveryAttendants(prev => [...prev, newAttendant]);
+    try {
+      const { error } = await supabase.from('exam_delivery_attendants').insert(newAttendant);
+      if (error) throw error;
+      toast.success("Atendente de entrega de exames adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar atendente de entrega de exames:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
+  };
+  const updateExamDeliveryAttendant = async (attendant: ExamDeliveryAttendant) => {
+    setExamDeliveryAttendants(prev => prev.map(a => a.id === attendant.id ? attendant : a));
+    try {
+      const { error } = await supabase.from('exam_delivery_attendants').update(attendant).eq('id', attendant.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar atendente de entrega de exames:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
+  };
+  const deleteExamDeliveryAttendant = async (id: string) => {
+    setExamDeliveryAttendants(prev => prev.filter(a => a.id !== id));
+    try {
+      const { error } = await supabase.from('exam_delivery_attendants').delete().eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao excluir atendente de entrega de exames:", error);
+      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      loadAllDataFromSupabase();
+    }
+  };
   // Recados
   const addRecadoCategory = async (category: Omit<RecadoCategory, 'id'>) => {
     const newCat = { ...category, id: crypto.randomUUID() };
     setRecadoCategories(prev => [...prev, newCat]);
-    await supabase.from('recado_categories').insert({ id: newCat.id, title: newCat.title, description: newCat.description, destination_type: newCat.destinationType, group_name: newCat.groupName });
+    try {
+      const { error } = await supabase.from('recado_categories').insert({ id: newCat.id, title: newCat.title, description: newCat.description, destination_type: newCat.destinationType, group_name: newCat.groupName, order: 0 });
+      if (error) throw error;
+      toast.success("Categoria de recados adicionada!");
+    } catch (error) {
+      console.error("Erro ao adicionar categoria de recados:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateRecadoCategory = (category: RecadoCategory) => {
+  const updateRecadoCategory = async (category: RecadoCategory) => {
     setRecadoCategories(prev => prev.map(c => c.id === category.id ? category : c));
-    supabase.from('recado_categories').update({ title: category.title, description: category.description, destination_type: category.destinationType, group_name: category.groupName }).eq('id', category.id).then();
+    try {
+      const { error } = await supabase.from('recado_categories').update({ title: category.title, description: category.description, destination_type: category.destinationType, group_name: category.groupName }).eq('id', category.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar categoria de recados:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteRecadoCategory = async (id: string) => {
     setRecadoCategories(prev => prev.filter(c => c.id !== id));
@@ -1062,21 +1442,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
     } catch (error) {
       console.error("Erro ao excluir categoria de recados:", error);
-      toast.error("Erro ao sincronizar exclusão. Recarregando...");
+      toast.error("Erro ao sincronizar exclusão.");
       loadAllDataFromSupabase();
     }
   };
-  const reorderRecadoCategories = () => { };
+  const reorderRecadoCategories = async (oldIndex: number, newIndex: number) => {
+    const newCategories = arrayMove(recadoCategories, oldIndex, newIndex);
+    setRecadoCategories(newCategories);
+
+    try {
+      const updates = newCategories.map((cat, index) =>
+        supabase.from('recado_categories').update({ order: index }).eq('id', cat.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar categorias de recados:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
+  };
   const addRecadoItem = async (categoryId: string, item: Omit<RecadoItem, 'id'>) => {
     const newItem = { ...item, id: crypto.randomUUID() };
     setRecadoData(prev => ({ ...prev, [categoryId]: [...(prev[categoryId] || []), newItem] }));
-    await supabase.from('recado_items').insert({ id: newItem.id, category_id: categoryId, title: newItem.title, content: newItem.content, fields: JSON.stringify(newItem.fields) });
+    try {
+      const { error } = await supabase.from('recado_items').insert({ id: newItem.id, category_id: categoryId, title: newItem.title, content: newItem.content, fields: JSON.stringify(newItem.fields) });
+      if (error) throw error;
+      toast.success("Recado adicionado!");
+    } catch (error) {
+      console.error("Erro ao adicionar recado:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateRecadoItem = (categoryId: string, itemId: string, updates: Partial<RecadoItem>) => {
+  const updateRecadoItem = async (categoryId: string, itemId: string, updates: Partial<RecadoItem>) => {
     setRecadoData(prev => ({ ...prev, [categoryId]: (prev[categoryId] || []).map(i => i.id === itemId ? { ...i, ...updates } : i) }));
     const dbUpdates: any = { ...updates };
     if (updates.fields) dbUpdates.fields = JSON.stringify(updates.fields);
-    supabase.from('recado_items').update(dbUpdates).eq('id', itemId).then();
+    try {
+      const { error } = await supabase.from('recado_items').update(dbUpdates).eq('id', itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar recado:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteRecadoItem = async (categoryId: string, itemId: string) => {
     setRecadoData(prev => ({ ...prev, [categoryId]: (prev[categoryId] || []).filter(i => i.id !== itemId) }));
@@ -1093,18 +1500,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addInfoTagGeneric = async (tag: Omit<InfoTag, 'id'>, section: 'anotacoes' | 'estomaterapia', setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
     const newTag = { ...tag, id: crypto.randomUUID(), user_id: section === 'anotacoes' ? user?.id : undefined };
     setTags(prev => [...prev, newTag]);
-    await supabase.from('info_tags').insert({
-      id: newTag.id,
-      name: newTag.name,
-      color: newTag.color,
-      order: newTag.order,
-      section_type: section,
-      user_id: newTag.user_id
-    });
+    try {
+      const { error } = await supabase.from('info_tags').insert({
+        id: newTag.id,
+        name: newTag.name,
+        color: newTag.color,
+        order: newTag.order,
+        section_type: section,
+        user_id: newTag.user_id
+      });
+      if (error) throw error;
+      toast.success(`Tag de ${section === 'anotacoes' ? 'anotações' : 'estomaterapia'} adicionada!`);
+    } catch (error) {
+      console.error("Erro ao adicionar tag:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
-  const updateInfoTagGeneric = (tag: InfoTag, setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
+  const updateInfoTagGeneric = async (tag: InfoTag, setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
     setTags(prev => prev.map(t => t.id === tag.id ? tag : t));
-    supabase.from('info_tags').update({ name: tag.name, color: tag.color }).eq('id', tag.id).then();
+    try {
+      const { error } = await supabase.from('info_tags').update({ name: tag.name, color: tag.color }).eq('id', tag.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar tag:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteInfoTagGeneric = async (tagId: string, setTags: React.Dispatch<React.SetStateAction<InfoTag[]>>) => {
     setTags(prev => prev.filter(t => t.id !== tagId));
@@ -1120,20 +1541,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addInfoItemGeneric = async (item: Omit<InfoItem, 'id' | 'date'>, setData: React.Dispatch<React.SetStateAction<Record<string, InfoItem[]>>>) => {
     const newItem = { ...item, id: crypto.randomUUID(), date: new Date().toLocaleDateString('pt-BR') };
     setData(prev => ({ ...prev, [item.tagId]: [...(prev[item.tagId] || []), newItem] }));
-    await supabase.from('info_items').insert({
-      id: newItem.id,
-      tag_id: item.tagId,
-      title: newItem.title,
-      content: newItem.content,
-      date: newItem.date,
-      info: newItem.info,
-      user_id: newItem.user_id
-    });
+    try {
+      const { error } = await supabase.from('info_items').insert({
+        id: newItem.id,
+        tag_id: item.tagId,
+        title: newItem.title,
+        content: newItem.content,
+        date: newItem.date,
+        info: newItem.info,
+        user_id: (item as any).user_id // Garantir que user_id seja passado se existir no item (anotações personalizadas)
+      });
+      if (error) throw error;
+      toast.success("Informação adicionada!");
+    } catch (error) {
+      console.error("Erro ao adicionar informação:", error);
+      toast.error("Erro ao salvar no servidor.");
+      loadAllDataFromSupabase();
+    }
   };
   const addInfoTag = (tag: Omit<InfoTag, 'id'>) => addInfoTagGeneric(tag, 'anotacoes', setInfoTags);
   const updateInfoTag = (tag: InfoTag) => updateInfoTagGeneric(tag, setInfoTags);
   const deleteInfoTag = (tagId: string) => deleteInfoTagGeneric(tagId, setInfoTags);
-  const reorderInfoTags = () => { };
+  const reorderInfoTags = async (oldIndex: number, newIndex: number) => {
+    const newTags = arrayMove(infoTags, oldIndex, newIndex);
+    setInfoTags(newTags);
+    try {
+      const updates = newTags.map((tag, index) =>
+        supabase.from('info_tags').update({ order: index }).eq('id', tag.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar tags:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
+  };
 
   const addInfoItem = (item: Omit<InfoItem, 'id' | 'date'>) => {
     // Injetar user_id para anotações pessoais
@@ -1141,9 +1582,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     addInfoItemGeneric(itemWithUser, setInfoData);
   };
 
-  const updateInfoItem = (item: InfoItem) => {
+  const updateInfoItem = async (item: InfoItem) => {
     setInfoData(prev => ({ ...prev, [item.tagId]: prev[item.tagId].map(i => i.id === item.id ? item : i) }));
-    supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();
+    try {
+      const { error } = await supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar informação:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteInfoItem = async (itemId: string, tagId: string) => {
     setInfoData(prev => {
@@ -1165,14 +1612,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addEstomaterapiaTag = (tag: Omit<InfoTag, 'id'>) => addInfoTagGeneric(tag, 'estomaterapia', setEstomaterapiaTags);
   const updateEstomaterapiaTag = (tag: InfoTag) => updateInfoTagGeneric(tag, setEstomaterapiaTags);
   const deleteEstomaterapiaTag = (tagId: string) => deleteInfoTagGeneric(tagId, setEstomaterapiaTags);
-  const reorderEstomaterapiaTags = () => { };
+  const reorderEstomaterapiaTags = async (oldIndex: number, newIndex: number) => {
+    const newTags = arrayMove(estomaterapiaTags, oldIndex, newIndex);
+    setEstomaterapiaTags(newTags);
+    try {
+      const updates = newTags.map((tag, index) =>
+        supabase.from('info_tags').update({ order: index }).eq('id', tag.id)
+      );
+      await Promise.all(updates);
+    } catch (error) {
+      console.error("Erro ao reordenar tags de estomaterapia:", error);
+      toast.error("Erro ao salvar ordem no servidor.");
+    }
+  };
   const addEstomaterapiaItem = (item: Omit<InfoItem, 'id' | 'date'>) => addInfoItemGeneric(item, setEstomaterapiaData);
-  const updateEstomaterapiaItem = (item: InfoItem) => {
+  const updateEstomaterapiaItem = async (item: InfoItem) => {
     setEstomaterapiaData(prev => {
       if (!prev[item.tagId]) return prev;
       return { ...prev, [item.tagId]: prev[item.tagId].map(i => i.id === item.id ? item : i) };
     });
-    supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id).then();
+    try {
+      const { error } = await supabase.from('info_items').update({ title: item.title, content: item.content, info: item.info }).eq('id', item.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar item de estomaterapia:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const deleteEstomaterapiaItem = async (itemId: string, tagId: string) => {
     setEstomaterapiaData(prev => {
@@ -1189,16 +1654,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Stubs
-  const addExamDeliveryAttendant = () => { };
-  const updateExamDeliveryAttendant = () => { };
-  const deleteExamDeliveryAttendant = () => { };
   const updateHeaderTag = async (id: string, updates: Omit<HeaderTagInfo, 'id' | 'tag'>) => {
     setHeaderTagData(prev => prev.map(tag => tag.id === id ? { ...tag, ...updates } : tag));
     const dbUpdates: any = { ...updates };
     if (updates.phones) dbUpdates.phones = JSON.stringify(updates.phones);
     if (updates.contacts) dbUpdates.contacts = JSON.stringify(updates.contacts);
-    await supabase.from('header_tags').update(dbUpdates).eq('id', id);
+    try {
+      const { error } = await supabase.from('header_tags').update(dbUpdates).eq('id', id);
+      if (error) throw error;
+      toast.success("Informações da unidade atualizadas!");
+    } catch (error) {
+      console.error("Erro ao atualizar unidade:", error);
+      toast.error("Erro ao sincronizar atualização.");
+    }
   };
   const loadExamsFromDatabase = async () => { };
   const setValueTableDataAndCategories = () => { };
