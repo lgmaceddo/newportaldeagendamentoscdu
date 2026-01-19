@@ -17,7 +17,7 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
   const handleCopyContact = (contact: ContactPoint) => {
     let textLines: string[] = [];
     textLines.push(`📍 ${contact.setor}`);
-    if (contact.local) textLines.push(`🏢 Local: ${contact.local}`);
+    // if (contact.local) textLines.push(`🏢 Local: ${contact.local}`); // Removed
     if (contact.ramal) textLines.push(`☎️ Ramal: ${contact.ramal}`);
     if (contact.telefone) textLines.push(`📞 Telefone: ${contact.telefone}`);
     if (contact.whatsapp) textLines.push(`💬 WhatsApp: ${contact.whatsapp}`);
@@ -119,9 +119,9 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
 
       {/* Descrição em linha separada e largura total - Respeitando quebras de linha */}
       {point.description && (
-        <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground italic pl-1 flex items-start gap-2 whitespace-pre-wrap">
-          <span className="text-primary/50 text-[10px] uppercase font-bold tracking-wider mt-0.5 select-none">Nota:</span>
-          <span>{point.description}</span>
+        <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground pl-1">
+          <span className="text-primary/50 text-[10px] uppercase font-bold tracking-wider mr-2 select-none">Nota:</span>
+          <div className="whitespace-pre-wrap mt-1 italic">{point.description}</div>
         </div>
       )}
     </div>

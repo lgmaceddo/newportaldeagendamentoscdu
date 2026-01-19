@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -52,7 +53,6 @@ export const ContactPointModal = ({
     if (open && editingPoint) {
       form.reset({
         setor: editingPoint.setor,
-        local: editingPoint.local,
         ramal: editingPoint.ramal,
         telefone: editingPoint.telefone,
         whatsapp: editingPoint.whatsapp,
@@ -61,7 +61,6 @@ export const ContactPointModal = ({
     } else if (open && !editingPoint) {
       form.reset({
         setor: "",
-        local: "",
         ramal: "",
         telefone: "",
         whatsapp: "",
@@ -127,25 +126,7 @@ export const ContactPointModal = ({
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="local"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="font-bold">Local</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ex: Prédio de Consultas / Térreo"
-                        {...field}
-                        maxLength={200}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="ramal"
@@ -154,7 +135,7 @@ export const ContactPointModal = ({
                     <FormLabel className="font-bold">Ramal</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Ex: 1001 / 1002"
+                        placeholder="Ex: 1001"
                         {...field}
                         maxLength={100}
                       />
@@ -163,9 +144,7 @@ export const ContactPointModal = ({
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="telefone"
@@ -210,8 +189,9 @@ export const ContactPointModal = ({
                 <FormItem>
                   <FormLabel className="font-bold">Descrição / Notas (Opcional)</FormLabel>
                   <FormControl>
-                    <Input
+                    <Textarea
                       placeholder="Ex: Informações adicionais, detalhes de funcionamento..."
+                      className="min-h-[100px] resize-y"
                       {...field}
                       maxLength={500}
                     />
