@@ -27,11 +27,11 @@ export const contactPointSchema = z.object({
     .trim()
     .max(50, { message: "WhatsApp deve ter no máximo 50 caracteres" })
     .optional(),
-  // description: z // REMOVIDO
-  //   .string()
-  //   .trim()
-  //   .max(500, { message: "Descrição deve ter no máximo 500 caracteres" })
-  //   .optional(),
+  description: z
+    .string()
+    .trim()
+    .max(500, { message: "Descrição deve ter no máximo 500 caracteres" })
+    .optional(),
 });
 
 // Schema for the main contact group (parent)

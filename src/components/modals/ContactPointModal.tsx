@@ -56,6 +56,7 @@ export const ContactPointModal = ({
         ramal: editingPoint.ramal,
         telefone: editingPoint.telefone,
         whatsapp: editingPoint.whatsapp,
+        description: editingPoint.description || "",
       });
     } else if (open && !editingPoint) {
       form.reset({
@@ -64,6 +65,7 @@ export const ContactPointModal = ({
         ramal: "",
         telefone: "",
         whatsapp: "",
+        description: "",
       });
     }
   }, [open, editingPoint, form]);
@@ -200,7 +202,25 @@ export const ContactPointModal = ({
                 )}
               />
             </div>
-            
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-bold">Descrição / Notas (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ex: Informações adicionais, detalhes de funcionamento..."
+                      {...field}
+                      maxLength={500}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="flex justify-end space-x-4 pt-4 border-t">
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancelar

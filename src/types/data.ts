@@ -39,7 +39,7 @@ export interface ContactPoint {
   ramal: string;
   telefone: string;
   whatsapp: string;
-  // description: string; // REMOVIDO: Descrição/Notas
+  description?: string; // Descrição/Notas opcionais
 }
 
 export interface ContactGroup {
