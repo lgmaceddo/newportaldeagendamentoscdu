@@ -280,8 +280,13 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
                   {category && (<div className="bg-muted p-2 font-medium border-b"> Categoria: {category.name} </div>)}
                   {filteredGroupsInCategory.map(group => {
                     const groupResults = results.filter(r => r.groupId === group.id);
-                    const pointIds = new Set(groupResults.filter(r => r.type === 'point').map(r => (r.item as ContactPoint).id));
-                    const matchingPoints = group.points.filter(point => pointIds.has(point.id));
+                    const isGroupMatch = groupResults.some(r => r.type === 'group');
+
+                    // Se o GRUPO deu match, mostra TODOS os pontos.
+                    // Se apenas PONTOS deram match, mostra apenas eles.
+                    const matchingPoints = isGroupMatch
+                      ? group.points
+                      : group.points.filter(point => groupResults.some(r => r.type === 'point' && (r.item as ContactPoint).id === point.id));
                     return (
                       <Collapsible key={group.id} open={openGroups.has(group.id)} onOpenChange={() => toggleGroup(group.id)} className="border-b last:border-b-0">
                         <CollapsibleTrigger asChild>
