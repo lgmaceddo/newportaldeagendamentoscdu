@@ -32,7 +32,8 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
   const location = useLocation();
   const { canEdit } = useUserRoleContext();
   const canEditContatos = canEdit('contatos');
-  const sortedCategories = useMemo(() => [...categories].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [categories]);
+  /* Ordenação Natural (baseada na ordem do array data/db), permitindo reordenação manual */
+  const sortedCategories = categories;
   const [activeCategory, setActiveCategory] = useState(sortedCategories[0]?.id || "");
   const [searchTerm, setSearchTerm] = useState("");
   const [groupModalOpen, setGroupModalOpen] = useState(false);
@@ -42,7 +43,7 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
   const [editingPoint, setEditingPoint] = useState<ContactPoint | undefined>();
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
-  const { addContactCategory, updateContactCategory, deleteContactCategory, addContactGroup, updateContactGroup, deleteContactGroup, addContactPoint, updateContactPoint, deleteContactPoint, hasUnsavedChanges, saveToLocalStorage } = useData();
+  const { addContactCategory, updateContactCategory, deleteContactCategory, reorderContactCategories, addContactGroup, updateContactGroup, deleteContactGroup, addContactPoint, updateContactPoint, deleteContactPoint, hasUnsavedChanges, saveToLocalStorage } = useData();
   const { toast } = useToast();
 
   // Helper para renderizar a lista de pontos agrupada
@@ -173,6 +174,15 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
       if (remainingCategories.length > 0) setActiveCategory(remainingCategories[0].id);
     }
   };
+
+  const handleReorderCategories = (oldIndex: number, newIndex: number) => {
+    reorderContactCategories(viewType, oldIndex, newIndex);
+    // Atualiza a categoria ativa para a nova posição, se necessário
+    const newActiveCategory = categories[newIndex]?.id;
+    if (newActiveCategory) {
+      setActiveCategory(newActiveCategory);
+    }
+  };
   const handleSaveGroup = (formData: ContactGroupFormData & { id?: string }) => {
     const groupData: Omit<ContactGroup, 'id' | 'points'> = { name: formData.name };
     if (formData.id) updateContactGroup(viewType, activeCategory, formData.id, groupData);
@@ -250,9 +260,23 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
           </div>
           {sortedCategories.length > 0 && !searchTerm && (
             <div className="border-b border-border pb-2">
-              <div className="flex flex-wrap gap-2 items-start">
-                {sortedCategories.map((cat) => (<div key={cat.id} className="flex-shrink-0 w-auto"> {renderCategoryButton(cat)} </div>))}
-              </div>
+              {canEditContatos ? (
+                <>
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-2">Arraste para reordenar as categorias:</h3>
+                  <SortableList
+                    items={sortedCategories}
+                    onReorder={handleReorderCategories}
+                    renderItem={(cat) => renderCategoryButton(cat)}
+                    className="flex flex-wrap gap-2 items-start"
+                    itemClassName="flex-shrink-0 w-auto"
+                    handleClassName="left-0"
+                  />
+                </>
+              ) : (
+                <div className="flex flex-wrap gap-2 items-start">
+                  {sortedCategories.map((cat) => (<div key={cat.id} className="flex-shrink-0 w-auto"> {renderCategoryButton(cat)} </div>))}
+                </div>
+              )}
             </div>
           )}
         </div>

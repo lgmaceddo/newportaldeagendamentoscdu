@@ -15,26 +15,12 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
   const { toast } = useToast();
 
   const handleCopyContact = (contact: ContactPoint) => {
-    // Formatar o texto para cópia com cada campo em uma linha separada
     let textLines: string[] = [];
-
     textLines.push(`📍 ${contact.setor}`);
-
-    if (contact.local) {
-      textLines.push(`🏢 Local: ${contact.local}`);
-    }
-
-    if (contact.ramal) {
-      textLines.push(`☎️ Ramal: ${contact.ramal}`);
-    }
-
-    if (contact.telefone) {
-      textLines.push(`📞 Telefone: ${contact.telefone}`);
-    }
-
-    if (contact.whatsapp) {
-      textLines.push(`💬 WhatsApp: ${contact.whatsapp}`);
-    }
+    if (contact.local) textLines.push(`🏢 Local: ${contact.local}`);
+    if (contact.ramal) textLines.push(`☎️ Ramal: ${contact.ramal}`);
+    if (contact.telefone) textLines.push(`📞 Telefone: ${contact.telefone}`);
+    if (contact.whatsapp) textLines.push(`💬 WhatsApp: ${contact.whatsapp}`);
 
     navigator.clipboard.writeText(textLines.join('\n'));
     toast({
@@ -51,69 +37,68 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
   };
 
   return (
-    <div className="border rounded-lg bg-card shadow-sm p-3 hover:shadow-md transition-shadow duration-200">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Conteúdo Principal: Nome do Ponto + Informações */}
-        <div className="flex flex-wrap items-center gap-3 min-w-0 flex-grow">
-          {/* Título do Ponto (Setor) */}
-          <div className="min-w-0 flex-shrink">
-            <h4 className="font-semibold text-sm text-foreground truncate">
-              {point.setor}
-            </h4>
-          </div>
+    <div className="border rounded-lg bg-card shadow-sm p-3 hover:shadow-md transition-shadow duration-200 group">
+      {/* Layout Grid para Desktop - Alinhamento Perfeito */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(200px,2fr)_minmax(120px,1fr)_minmax(100px,0.8fr)_minmax(140px,1.2fr)_auto] gap-2 md:gap-4 items-center">
 
-          {/* Informações do Ponto - na mesma linha, alinhadas à esquerda */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground min-w-0">
-            {point.local && (
-              <span className="truncate" title={`Local: ${point.local}`}>
-                <MapPin className="h-3 w-3 text-primary inline mr-1" />
-                {point.local}
-              </span>
-            )}
+        {/* 1. Nome do Ponto (Setor) */}
+        <div className="font-semibold text-sm text-foreground truncate" title={point.setor}>
+          {point.setor}
+        </div>
 
-            {point.ramal && (
-              <span className="truncate" title={`Ramal: ${point.ramal}`}>
-                <Phone className="h-3 w-3 text-primary inline mr-1" />
-                <span className="font-medium text-primary">Ramal:</span>
-                <span className="font-bold text-primary"> {point.ramal}</span>
-              </span>
-            )}
-
-            {point.telefone && (
-              <span className="truncate" title={`Telefone: ${point.telefone}`}>
-                <Phone className="h-3 w-3 text-primary inline mr-1" />
-                <span className="font-medium">Telefone:</span>
-                <span className="font-bold"> {point.telefone}</span>
-              </span>
-            )}
-
-            {point.whatsapp && (
-              <span className="truncate" title={`WhatsApp: ${point.whatsapp}`}>
-                <Smartphone className="h-3 w-3 text-green-600 inline mr-1" />
-                <span className="font-medium text-green-600">WhatsApp:</span>
-                <span className="font-bold text-green-600"> {point.whatsapp}</span>
-              </span>
-            )}
-          </div>
-
-          {/* Descrição opcional */}
-          {point.description && (
-            <div className="w-full text-xs text-muted-foreground italic mt-2 pl-2 border-l-2 border-primary/20 break-words">
-              {point.description}
-            </div>
+        {/* 2. Local */}
+        <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5" title={point.local || ''}>
+          {point.local ? (
+            <>
+              <MapPin className="h-3 w-3 text-primary flex-shrink-0" />
+              <span>{point.local}</span>
+            </>
+          ) : (
+            <span className="opacity-0">-</span> // Mantém altura/alinhamento se vazio
           )}
         </div>
 
-        {/* Ações - alinhadas à direita */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        {/* 3. Ramal */}
+        <div className="text-xs truncate flex items-center gap-1.5" title={point.ramal ? `Ramal: ${point.ramal}` : ''}>
+          {point.ramal ? (
+            <>
+              <Phone className="h-3 w-3 text-primary flex-shrink-0" />
+              <span className="font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                R: {point.ramal}
+              </span>
+            </>
+          ) : (
+            <span className="opacity-0">-</span>
+          )}
+        </div>
+
+        {/* 4. Telefone / WhatsApp */}
+        <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
+          {point.whatsapp ? (
+            <div className="flex items-center gap-1 text-green-600 font-medium" title="WhatsApp">
+              <Smartphone className="h-3 w-3" />
+              <span>{point.whatsapp}</span>
+            </div>
+          ) : point.telefone ? (
+            <div className="flex items-center gap-1" title="Telefone">
+              <Phone className="h-3 w-3" />
+              <span>{point.telefone}</span>
+            </div>
+          ) : (
+            <span className="opacity-0">-</span>
+          )}
+        </div>
+
+        {/* 5. Ações */}
+        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           {canEdit && (
             <>
               <Button
                 size="icon"
                 variant="ghost"
                 onClick={(e) => handleActionClick(e, () => onEdit(point))}
-                className="h-7 w-7 text-muted-foreground hover:text-primary p-1"
-                title="Editar Ponto"
+                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                title="Editar"
               >
                 <Edit className="h-3.5 w-3.5" />
               </Button>
@@ -121,24 +106,32 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
                 size="icon"
                 variant="ghost"
                 onClick={(e) => handleActionClick(e, () => onDelete(point.id))}
-                className="h-7 w-7 text-muted-foreground hover:text-destructive p-1"
-                title="Excluir Ponto"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                title="Excluir"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </>
           )}
           <Button
-            size="sm"
-            variant="outline"
+            size="icon"
+            variant="ghost"
             onClick={(e) => handleActionClick(e, () => handleCopyContact(point))}
-            className="h-7 text-xs px-2"
-            title="Copiar Informações"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            title="Copiar"
           >
-            <Copy className="h-3 w-3 mr-1" /> Copiar
+            <Copy className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
+
+      {/* Descrição em linha separada e largura total */}
+      {point.description && (
+        <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground italic pl-1 flex items-start gap-2">
+          <span className="text-primary/50 text-[10px] uppercase font-bold tracking-wider mt-0.5">Nota:</span>
+          {point.description}
+        </div>
+      )}
     </div>
   );
 };

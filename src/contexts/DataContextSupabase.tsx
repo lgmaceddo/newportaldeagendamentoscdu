@@ -75,6 +75,7 @@ interface DataContextType {
   addContactCategory: (viewType: string, category: Category) => void;
   updateContactCategory: (viewType: string, categoryId: string, updates: Partial<Category>) => void;
   deleteContactCategory: (viewType: string, categoryId: string) => void;
+  reorderContactCategories: (viewType: string, oldIndex: number, newIndex: number) => void;
   addContactGroup: (viewType: string, categoryId: string, group: Omit<ContactGroup, 'id' | 'points'>) => void;
   updateContactGroup: (viewType: string, categoryId: string, groupId: string, updates: Partial<ContactGroup>) => void;
   deleteContactGroup: (viewType: string, categoryId: string, groupId: string) => void;
@@ -866,6 +867,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loadAllDataFromSupabase();
     }
   };
+
+  const reorderContactCategories = (viewType: string, oldIndex: number, newIndex: number) => {
+    setContactCategories((prev) => {
+      const categories = prev[viewType] || [];
+      const newCategories = arrayMove(categories, oldIndex, newIndex);
+      return {
+        ...prev,
+        [viewType]: newCategories
+      };
+    });
+    // TODO: Adicionar persistência no Supabase quando a coluna 'order' for garantida nas tabelas de categoria
+  };
+
   const addContactGroup = async (viewType: string, categoryId: string, group: Omit<ContactGroup, 'id' | 'points'>) => {
     const newGroup = { ...group, id: crypto.randomUUID(), points: [] };
     setContactData(prev => { const newData = { ...prev }; newData[viewType] = newData[viewType] || {}; newData[viewType][categoryId] = [...(newData[viewType][categoryId] || []), newGroup]; return newData; });
@@ -1212,7 +1226,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       headerTagData, updateHeaderTag,
       scriptCategories, scriptData, addScriptCategory, updateScriptCategory, deleteScriptCategory, reorderScriptCategories, addScript, updateScript, deleteScript,
       examCategories, examData, addExamCategory, updateExamCategory, deleteExamCategory, reorderExamCategories, addExam, updateExam, deleteExam, syncValueTableToExams,
-      contactCategories, contactData, addContactCategory, updateContactCategory, deleteContactCategory, addContactGroup, updateContactGroup, deleteContactGroup, addContactPoint, updateContactPoint, deleteContactPoint,
+      contactCategories, contactData, addContactCategory, updateContactCategory, deleteContactCategory, reorderContactCategories, addContactGroup, updateContactGroup, deleteContactGroup, addContactPoint, updateContactPoint, deleteContactPoint,
       valueTableCategories, valueTableData, addValueCategory, updateValueCategory, deleteValueCategory, reorderValueCategories, addValueTable, moveAndUpdateValueTable, deleteValueTable,
       professionalData, addProfessional, updateProfessional, deleteProfessional,
       officeData, addOffice, updateOffice, deleteOffice,

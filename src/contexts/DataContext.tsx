@@ -79,6 +79,7 @@ interface DataContextType {
   addContactCategory: (viewType: string, category: Category) => void;
   updateContactCategory: (viewType: string, categoryId: string, updates: Partial<Category>) => void;
   deleteContactCategory: (viewType: string, categoryId: string) => void;
+  reorderContactCategories: (viewType: string, oldIndex: number, newIndex: number) => void;
 
   // Group CRUD
   addContactGroup: (viewType: string, categoryId: string, group: Omit<ContactGroup, 'id' | 'points'>) => void;
@@ -474,6 +475,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         [viewType]: rest
       };
     });
+    setHasUnsavedChanges(true);
+  };
+
+  const reorderContactCategories = (viewType: string, oldIndex: number, newIndex: number) => {
+    setContactCategories(prev => ({
+      ...prev,
+      [viewType]: arrayMove(prev[viewType], oldIndex, newIndex)
+    }));
     setHasUnsavedChanges(true);
   };
 
@@ -1148,6 +1157,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       addContactCategory,
       updateContactCategory,
       deleteContactCategory,
+      reorderContactCategories,
       addContactGroup,
       updateContactGroup,
       deleteContactGroup,
