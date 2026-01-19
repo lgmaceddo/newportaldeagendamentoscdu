@@ -67,9 +67,10 @@ export const UserRoleProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Admins podem editar tudo
     if (isAdmin) return true;
 
-    // Usuários comuns podem editar 'anotacoes' (pessoal) e 'informacoes' (legado/geral)
+    // Usuários comuns NÃO podem editar 'anotacoes' (apenas leitura, conforme solicitado)
+    // Se houver necessidade futura de anotações estritamente pessoais, criar nova rule.
     if (section === 'anotacoes' || section === 'informacoes') {
-      return true;
+      return false;
     }
 
     return false;
