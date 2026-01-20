@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, FileText, Edit, Trash2, Save, X, Eye, Upload, FileSpreadsheet } from "lucide-react";
+import { Plus, FileText, Edit, Trash2, Save, X, Eye, Upload, FileSpreadsheet, Clock } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   const [editingValue, setEditingValue] = useState<(ValueTableItem & { oldCategoryId: string }) | undefined>();
   const [viewingValue, setViewingValue] = useState<ValueTableItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable } = useData();
+  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable, lastExcelSync } = useData();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -492,14 +492,22 @@ O valor total do procedimento é de R$ 1.795,00.
                     accept=".xlsx, .xls, .csv"
                     className="hidden"
                   />
-                  <Button
-                    variant="outline"
-                    className="border-primary text-primary hover:bg-primary/10"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={categories.length === 0}
-                  >
-                    <FileSpreadsheet className="h-5 w-5 mr-2" /> Sincronizar Excel
-                  </Button>
+                  <div className="flex flex-col items-center">
+                    <Button
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary/10"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={categories.length === 0}
+                    >
+                      <FileSpreadsheet className="h-5 w-5 mr-2" /> Sincronizar Excel
+                    </Button>
+                    {lastExcelSync && (
+                      <span className="text-[10px] text-muted-foreground mt-1 flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Sincronizado: {lastExcelSync}
+                      </span>
+                    )}
+                  </div>
                   <Button
                     className="bg-primary hover:bg-primary/90"
                     onClick={() => setIsValueModalOpen(true)}

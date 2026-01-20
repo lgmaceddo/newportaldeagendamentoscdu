@@ -193,6 +193,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [infoData, setInfoData] = useState<Record<string, InfoItem[]>>(initialInfoData);
   const [estomaterapiaTags, setEstomaterapiaTags] = useState<InfoTag[]>(initialEstomaterapiaTags);
   const [estomaterapiaData, setEstomaterapiaData] = useState<Record<string, InfoItem[]>>(initialEstomaterapiaData);
+  const [lastExcelSync, setLastExcelSync] = useState<string | undefined>(localStorage.getItem('last_excel_sync') || undefined);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const loadFromLocalStorage = () => {
@@ -1359,6 +1360,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // 3. Reload all data silently
       try {
+        const now = new Date().toLocaleString('pt-BR');
+        setLastExcelSync(now);
+        localStorage.setItem('last_excel_sync', now);
         await loadAllDataFromSupabase();
       } catch (e) {
         console.warn("Silent failure reloading data after bulk upsert:", e);
@@ -1759,6 +1763,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       examCategories, examData, addExamCategory, updateExamCategory, deleteExamCategory, reorderExamCategories, addExam, updateExam, deleteExam, syncValueTableToExams,
       contactCategories, contactData, addContactCategory, updateContactCategory, deleteContactCategory, reorderContactCategories, addContactGroup, updateContactGroup, deleteContactGroup, addContactPoint, updateContactPoint, deleteContactPoint,
       valueTableCategories, valueTableData, addValueCategory, updateValueCategory, deleteValueCategory, reorderValueCategories, addValueTable, moveAndUpdateValueTable, deleteValueTable, bulkUpsertValueTable,
+      lastExcelSync,
       professionalData, addProfessional, updateProfessional, deleteProfessional,
       officeData, addOffice, updateOffice, deleteOffice,
       noticeData, addNotice, updateNotice, deleteNotice,
