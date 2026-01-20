@@ -73,7 +73,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
 
           // --- 1. DETECTAR CATEGORIA ---
           const findCategory = (str: string) => {
-            const normalized = str.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            const normalized = String(str || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             if (!normalized) return null;
 
             // Palavras-chave extras para garantir o match
@@ -85,17 +85,21 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
             };
 
             return categories.find(c => {
-              const catNorm = c.name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+              const catName = c && c.name ? String(c.name) : "";
+              const catNorm = catName.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
               const keywords = extraKeywords[catNorm] || [];
-              return catNorm === normalized || catNorm.includes(normalized) || normalized.includes(catNorm) || keywords.some(k => normalized.includes(k));
+              return catNorm === normalized ||
+                (catNorm && catNorm.includes(normalized)) ||
+                (normalized && normalized.includes(catNorm)) ||
+                keywords.some(k => normalized.includes(k));
             });
           };
 
           let targetCategory = findCategory(wsname);
 
           if (!targetCategory) {
-            const firstCell = rows.find(r => r.length > 0)?.find(c => c && typeof c === 'string');
-            if (firstCell) targetCategory = findCategory(String(firstCell));
+            const firstCell = rows.find(r => r && r.length > 0)?.find(c => c !== null && c !== undefined);
+            if (firstCell !== undefined) targetCategory = findCategory(String(firstCell));
           }
 
           if (!targetCategory) {
@@ -112,8 +116,9 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
           let headerRowIndex = -1;
           for (let i = 0; i < Math.min(rows.length, 15); i++) {
             const row = rows[i];
-            if (row && Array.isArray(row) && row.some(cell => String(cell || "").toLowerCase().includes('item')) &&
-              row.some(cell => String(cell || "").toLowerCase().includes('descrição') || String(cell || "").toLowerCase().includes('descricao'))) {
+            if (row && Array.isArray(row) &&
+              row.some(cell => cell && String(cell).toLowerCase().includes('item')) &&
+              row.some(cell => cell && (String(cell).toLowerCase().includes('descrição') || String(cell).toLowerCase().includes('descricao')))) {
               headerRowIndex = i;
               break;
             }
@@ -121,11 +126,13 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
 
           if (headerRowIndex === -1) continue;
 
-          const headers = rows[headerRowIndex].map(h => String(h || "").toLowerCase().trim());
+          // Garantir que headers seja um array denso de strings
+          const rawHeaders = rows[headerRowIndex];
+          const headers = Array.from(rawHeaders || []).map(h => String(h || "").toLowerCase().trim());
           const dataRows = rows.slice(headerRowIndex + 1);
 
           // --- 3. MAPEAMENTO E PARSING ---
-          const getIdx = (names: string[]) => headers.findIndex(h => names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
+          const getIdx = (names: string[]) => headers.findIndex(h => h && names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
           const idxCodigo = getIdx(['item', 'código', 'cod']);
           const idxNome = getIdx(['descrição', 'nome do exame', 'exame', 'descricao']);
           const idxHonorario = getIdx(['honorário médico', 'honorário pix', 'hm']);
