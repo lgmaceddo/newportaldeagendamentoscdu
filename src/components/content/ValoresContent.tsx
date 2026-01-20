@@ -46,7 +46,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   const [editingValue, setEditingValue] = useState<(ValueTableItem & { oldCategoryId: string }) | undefined>();
   const [viewingValue, setViewingValue] = useState<ValueTableItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable, lastExcelSync } = useData();
+  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable, lastExcelSync, syncAllDataFromSupabase } = useData();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
