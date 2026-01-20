@@ -72,29 +72,36 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
           if (rows.length === 0) continue;
 
           // --- 1. DETECTAR CATEGORIA ---
-          // Tenta casar nome da aba ou conteúdo da primeira linha com categorias existentes
           const findCategory = (str: string) => {
             const normalized = str.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (!normalized) return null;
+
+            // Palavras-chave extras para garantir o match
+            const extraKeywords: Record<string, string[]> = {
+              "cardio": ["coracao", "cardiologia", "eco", "mapa", "holter"],
+              "ultrassom geral": ["ultrassom", "usg", "ecografia"],
+              "neurologia": ["eletroencefalo", "eeg", "cerebral"],
+              "mamografia": ["mama", "densitometria"]
+            };
+
             return categories.find(c => {
               const catNorm = c.name.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-              return catNorm === normalized || catNorm.includes(normalized) || normalized.includes(catNorm);
+              const keywords = extraKeywords[catNorm] || [];
+              return catNorm === normalized || catNorm.includes(normalized) || normalized.includes(catNorm) || keywords.some(k => normalized.includes(k));
             });
           };
 
           let targetCategory = findCategory(wsname);
 
-          // Se não achou na aba, tenta ver se tem um título na primeira linha
           if (!targetCategory) {
             const firstCell = rows.find(r => r.length > 0)?.find(c => c && typeof c === 'string');
             if (firstCell) targetCategory = findCategory(String(firstCell));
           }
 
-          // Se ainda não achou e só tem uma aba, usa a ativa. Se tem várias e não achou, pula.
           if (!targetCategory) {
             if (wb.SheetNames.length === 1) {
               targetCategory = categories.find(c => c.id === activeCategory);
             } else {
-              console.warn(`Pulando aba "${wsname}": categoria não identificada.`);
               continue;
             }
           }
@@ -105,8 +112,8 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
           let headerRowIndex = -1;
           for (let i = 0; i < Math.min(rows.length, 15); i++) {
             const row = rows[i];
-            if (row && row.some(cell => String(cell).toLowerCase().includes('item')) &&
-              row.some(cell => String(cell).toLowerCase().includes('descrição') || String(cell).toLowerCase().includes('descricao'))) {
+            if (row && Array.isArray(row) && row.some(cell => String(cell || "").toLowerCase().includes('item')) &&
+              row.some(cell => String(cell || "").toLowerCase().includes('descrição') || String(cell || "").toLowerCase().includes('descricao'))) {
               headerRowIndex = i;
               break;
             }
@@ -129,7 +136,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
             if (v === null || v === undefined || v === "") return 0;
             if (typeof v === 'number') return v;
             if (typeof v === 'string') {
-              const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+              const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^0-9.]/g, '');
               const parsed = parseFloat(cleaned);
               return isNaN(parsed) ? 0 : parsed;
             }
@@ -150,7 +157,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
           };
 
           const mappedItems: Omit<ValueTableItem, 'id'>[] = dataRows
-            .filter(row => row[idxNome] || row[idxCodigo])
+            .filter(row => Array.isArray(row) && (row[idxNome] || row[idxCodigo]))
             .map((row) => {
               const materialRange = parseRange(row[idxMaterial]);
               return {
@@ -167,22 +174,26 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
             .filter(item => item.nome && (item.codigo || item.honorario > 0));
 
           if (mappedItems.length > 0 && bulkUpsertValueTable) {
-            const result = await bulkUpsertValueTable(VIEW_TYPE, targetCategory.id, mappedItems);
-            totalUpdated += result.updated;
-            totalCreated += result.created;
+            // Usa skipReload: true para ser rápido dentro do loop
+            await bulkUpsertValueTable(VIEW_TYPE, targetCategory.id, mappedItems, true);
             categoriesProcessed++;
           }
         }
 
         if (categoriesProcessed > 0) {
+          // Faz um único reload ao final de tudo
+          if (syncAllDataFromSupabase) {
+            toast({ title: "Sincronizando...", description: "Atualizando dados finais na tela..." });
+            await syncAllDataFromSupabase();
+          }
           toast({
             title: "Sincronização Completa!",
-            description: `Atualizado ${categoriesProcessed} categorias. Total: ${totalCreated} novos e ${totalUpdated} atualizados.`,
+            description: `${categoriesProcessed} categorias atualizadas com sucesso.`,
           });
         } else {
           toast({
             title: "Nada sincronizado",
-            description: "Não conseguimos mapear as abas do Excel para as categorias do portal. Verifique os nomes.",
+            description: "Não conseguimos mapear as abas do Excel para as categorias do portal. Verifique os nomes das abas.",
             variant: "destructive"
           });
         }
@@ -190,7 +201,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
         console.error("Erro ao importar Excel:", err);
         toast({
           title: "Erro na sincronização",
-          description: "Ocorreu um erro ao processar o arquivo. Verifique se o formato está correto.",
+          description: err.message || "Ocorreu um erro ao processar o arquivo. Verifique se o formato está correto.",
           variant: "destructive"
         });
       } finally {

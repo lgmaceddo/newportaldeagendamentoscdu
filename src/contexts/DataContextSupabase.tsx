@@ -1308,7 +1308,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loadAllDataFromSupabase();
     }
   };
-  const bulkUpsertValueTable = async (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[]): Promise<{ updated: number; created: number }> => {
+  const bulkUpsertValueTable = async (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[], skipReload: boolean = false): Promise<{ updated: number; created: number }> => {
     let created = 0;
     let updated = 0;
 
@@ -1358,14 +1358,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (upsertError) throw upsertError;
       }
 
-      // 3. Reload all data silently
-      try {
-        const now = new Date().toLocaleString('pt-BR');
-        setLastExcelSync(now);
-        localStorage.setItem('last_excel_sync', now);
-        await loadAllDataFromSupabase();
-      } catch (e) {
-        console.warn("Silent failure reloading data after bulk upsert:", e);
+      const now = new Date().toLocaleString('pt-BR');
+      setLastExcelSync(now);
+      localStorage.setItem('last_excel_sync', now);
+
+      // 3. Reload all data silently if not skipped
+      if (!skipReload) {
+        try {
+          await loadAllDataFromSupabase();
+        } catch (e) {
+          console.warn("Silent failure reloading data after bulk upsert:", e);
+        }
       }
 
       return { updated, created };
