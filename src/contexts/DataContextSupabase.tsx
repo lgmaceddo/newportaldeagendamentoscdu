@@ -1325,7 +1325,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (item.codigo) codigoMap.set(item.codigo, item.id);
       });
 
-      const toUpsert = items.map(item => {
+      // De-duplicate items by codigo to avoid primary key conflicts in the same batch
+      const uniqueItemsMap = new Map<string, Omit<ValueTableItem, 'id'>>();
+      items.forEach(item => {
+        if (item.codigo) uniqueItemsMap.set(item.codigo, item);
+      });
+
+      const toUpsert = Array.from(uniqueItemsMap.values()).map(item => {
         const existingId = codigoMap.get(item.codigo);
         if (existingId) updated++; else created++;
 
@@ -1343,24 +1349,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       });
 
-      // 2. Perform upsert in chunks to avoid large request body issues
+      // 2. Perform upsert in chunks
       const chunkSize = 50;
       for (let i = 0; i < toUpsert.length; i += chunkSize) {
         const chunk = toUpsert.slice(i, i + chunkSize);
-        const { error: upsertError } = await supabase
-          .from('value_table_items')
-          .upsert(chunk);
-
+        const { error: upsertError } = await supabase.from('value_table_items').upsert(chunk);
         if (upsertError) throw upsertError;
       }
 
-      // 3. Reload all data to sync local state
-      await loadAllDataFromSupabase();
+      // 3. Reload all data silently
+      try {
+        await loadAllDataFromSupabase();
+      } catch (e) {
+        console.warn("Silent failure reloading data after bulk upsert:", e);
+      }
 
       return { updated, created };
     } catch (error) {
       console.error("Erro no bulk upsert de valores:", error);
-      toast.error("Erro ao sincronizar dados com o servidor.");
       throw error;
     }
   };

@@ -121,11 +121,11 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
           if (!v) return { min: 0, max: 0 };
           const s = String(v).toLowerCase();
 
-          // Se for algo como "de 500 a 1500" or "500 - 1500"
+          // Busca todos os números (com separador decimal opcional)
           const numbers = s.match(/\d+([.,]\d+)?/g);
           if (numbers && numbers.length >= 2) {
-            const n1 = parseNum(numbers[0].replace(',', '.'));
-            const n2 = parseNum(numbers[1].replace(',', '.'));
+            const n1 = parseNum(numbers[0]);
+            const n2 = parseNum(numbers[1]);
             return { min: Math.min(n1, n2), max: Math.max(n1, n2) };
           }
 
@@ -167,11 +167,11 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
             description: `${result.created} novos exames incluídos e ${result.updated} valores atualizados com sucesso.`,
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Erro ao importar Excel:", err);
         toast({
-          title: "Erro no processamento",
-          description: "Ocorreu um erro ao ler o arquivo Excel.",
+          title: "Erro na sincronização",
+          description: err.message || "Ocorreu um erro ao processar o arquivo. Verifique se não há códigos duplicados ou dados inválidos.",
           variant: "destructive"
         });
       } finally {
