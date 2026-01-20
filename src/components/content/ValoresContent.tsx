@@ -324,18 +324,21 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
 
 O valor total do procedimento é de R$ 1.795,00.
 
-• Este valor inclui a realização com *sedação*;
-• Em caso de necessidade de *anestesia*, o valor deve ser consultado diretamente com a UNIANEST: 📞 (14) 3206-3101 | (14) 3206-9435.
+Este valor inclui a realização com sedação;
+
+Em caso de necessidade de anestesia, o valor deve ser consultado diretamente com a UNIANEST: 📞 (14) 3206-3101 | (14) 3206-9435.
 
 📦 Materiais e Biópsia (Custos Adicionais):
 
-• Envio para biópsia: Acréscimo de R$ 400,00 a R$ 1.100,00 (dependendo da quantidade de amostras);
-• Taxa por pólipo: Acréscimo de R$ 400,00 a R$ 1.100,00 por formação retirada.
+Envio para biópsia: Acréscimo de R$ 400,00 a R$ 1.100,00 (dependendo da quantidade de amostras);
+
+Taxa por pólipo: Acréscimo de R$ 400,00 a R$ 1.100,00 por formação retirada.
 
 Para dúvidas sobre valores e condições de pagamento, entre em contato com nosso setor Financeiro:
 
-*💬 WhatsApp Financeiro: (14) 99865-9327*
-*🕒 Horário: Seg a Sex: 7h às 19h | Sáb: 8h às 13h*
+💬 WhatsApp Financeiro: (14) 99865-9327 🕒 Horário de Atendimento:
+* Segunda a Sexta: 07h às 19h
+* Sábado: 08h às 13h
 
 Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui para ajudar! 😊`;
   };
@@ -435,15 +438,16 @@ Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui
       script += "========================================\n\n";
     }
 
-    // Adiciona a informação de Polipectomia se necessário
+    // Adiciona a informação de Polipectomia ou apenas os contatos financeiros
     if (needsPolipectomyInfo) {
-      script += "\n" + generatePolipectomyInfo() + "\n";
+      script += "\n" + generatePolipectomyInfo();
+    } else {
+      script += `Para dúvidas sobre valores e condições de pagamento, entre em contato com nosso setor Financeiro:\n\n`;
+      script += `💬 WhatsApp Financeiro: (14) 99865-9327 🕒 Horário de Atendimento:\n`;
+      script += `* Segunda a Sexta: 07h às 19h\n`;
+      script += `* Sábado: 08h às 13h\n\n`;
+      script += `Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui para ajudar! 😊`;
     }
-
-    script += `Para dúvidas sobre valores e condições de pagamento, por favor, entre em contato com nosso setor Financeiro:\n\n`;
-    script += `*💬 WhatsApp Financeiro: (14) 99865-9327*\n`;
-    script += `*🕒 Horário: Seg a Sex: 7h às 19h | Sáb: 8h às 13h*\n\n`;
-    script += `Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui para ajudar! 😊`;
 
     setGeneratedScript(script);
     setIsScriptModalOpen(true);
