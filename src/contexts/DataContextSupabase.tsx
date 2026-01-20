@@ -1307,30 +1307,65 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loadAllDataFromSupabase();
     }
   };
-  const bulkUpsertValueTable = async (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[]): Promise<{ updated: number; created: number }> => {
-    let created = 0;
-    let updated = 0;
-
+  const bulkUpsertValueTable = async (viewType: string, categoryId: string, items: any): Promise<{ updated: number; created: number }> => {
     try {
-      // 1. Fetch current items in this category to match by 'codigo'
-      const { data: existingItems, error: fetchError } = await supabase
-        .from('value_table_items')
-        .select('id, codigo')
-        .eq('category_id', categoryId);
+      if (categoryId === 'GLOBAL_REPLACE') {
+        const payload = items as { categoryName: string, items: Omit<ValueTableItem, 'id'>[] }[];
 
-      if (fetchError) throw fetchError;
+        // 1. Limpeza total de itens e categorias de valores
+        const { data: catsToDelete } = await supabase.from('categories').select('id').eq('view_type', viewType);
+        const catIds = catsToDelete?.map(c => c.id) || [];
 
-      const codigoMap = new Map<string, string>(); // codigo -> id
-      existingItems?.forEach(item => {
-        if (item.codigo) codigoMap.set(item.codigo, item.id);
-      });
+        if (catIds.length > 0) {
+          await supabase.from('value_table_items').delete().in('category_id', catIds);
+          await supabase.from('categories').delete().in('id', catIds);
+        }
 
-      const toUpsert = items.map(item => {
-        const existingId = codigoMap.get(item.codigo);
-        if (existingId) updated++; else created++;
+        let totalCreated = 0;
 
-        return {
-          id: existingId || crypto.randomUUID(),
+        for (const group of payload) {
+          // 2. Criar a categoria
+          const newCat = {
+            id: crypto.randomUUID(),
+            name: group.categoryName,
+            color: "#10605B",
+            view_type: viewType,
+            order_index: payload.indexOf(group)
+          };
+
+          await supabase.from('categories').insert(newCat);
+
+          // 3. Preparar itens
+          const toInsert = group.items.map(item => ({
+            id: crypto.randomUUID(),
+            category_id: newCat.id,
+            codigo: item.codigo,
+            nome: item.nome,
+            info: item.info || "",
+            honorario: item.honorario,
+            exame_cartao: item.exame_cartao,
+            material_min: item.material_min,
+            material_max: item.material_max,
+            honorarios_diferenciados: JSON.stringify(item.honorarios_diferenciados || [])
+          }));
+
+          // 4. Inserir itens em blocos
+          const chunkSize = 50;
+          for (let i = 0; i < toInsert.length; i += chunkSize) {
+            await supabase.from('value_table_items').insert(toInsert.slice(i, i + chunkSize));
+          }
+          totalCreated += items.length;
+        }
+
+        await loadAllDataFromSupabase();
+        return { updated: 0, created: totalCreated };
+      } else {
+        // Lógica original para categoria única
+        const itemsToInsert = items as Omit<ValueTableItem, 'id'>[];
+        await supabase.from('value_table_items').delete().eq('category_id', categoryId);
+
+        const toInsert = itemsToInsert.map(item => ({
+          id: crypto.randomUUID(),
           category_id: categoryId,
           codigo: item.codigo,
           nome: item.nome,
@@ -1340,24 +1375,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           material_min: item.material_min,
           material_max: item.material_max,
           honorarios_diferenciados: JSON.stringify(item.honorarios_diferenciados || [])
-        };
-      });
+        }));
 
-      // 2. Perform upsert in chunks to avoid large request body issues
-      const chunkSize = 50;
-      for (let i = 0; i < toUpsert.length; i += chunkSize) {
-        const chunk = toUpsert.slice(i, i + chunkSize);
-        const { error: upsertError } = await supabase
-          .from('value_table_items')
-          .upsert(chunk);
+        const chunkSize = 50;
+        for (let i = 0; i < toInsert.length; i += chunkSize) {
+          await supabase.from('value_table_items').insert(toInsert.slice(i, i + chunkSize));
+        }
 
-        if (upsertError) throw upsertError;
+        await loadAllDataFromSupabase();
+        return { updated: 0, created: toInsert.length };
       }
-
-      // 3. Reload all data to sync local state
-      await loadAllDataFromSupabase();
-
-      return { updated, created };
     } catch (error) {
       console.error("Erro no bulk upsert de valores:", error);
       toast.error("Erro ao sincronizar dados com o servidor.");

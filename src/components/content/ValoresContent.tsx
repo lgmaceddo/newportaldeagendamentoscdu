@@ -59,119 +59,112 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: "binary" });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
 
-        // Usamos header: 1 para ler como array de arrays, facilitando pular linhas de título
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+        const allDataToImport: { categoryName: string, items: Omit<ValueTableItem, 'id'>[] }[] = [];
 
-        if (rows.length === 0) {
-          toast({
-            title: "Arquivo vazio",
-            description: "A planilha não contém dados ou o formato não é suportado.",
-            variant: "destructive"
-          });
-          return;
-        }
+        for (const wsname of wb.SheetNames) {
+          const ws = wb.Sheets[wsname];
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
-        // --- 1. ENCONTRAR A LINHA DE CABEÇALHO ---
-        let headerRowIndex = -1;
-        for (let i = 0; i < Math.min(rows.length, 10); i++) {
-          const row = rows[i];
-          if (row && row.some(cell => String(cell).toLowerCase().includes('item')) &&
-            row.some(cell => String(cell).toLowerCase().includes('descrição') || String(cell).toLowerCase().includes('descricao'))) {
-            headerRowIndex = i;
-            break;
+          if (rows.length === 0) continue;
+
+          // --- 1. ENCONTRAR A LINHA DE CABEÇALHO ---
+          let headerRowIndex = -1;
+          for (let i = 0; i < Math.min(rows.length, 10); i++) {
+            const row = rows[i];
+            if (row && row.some(cell => String(cell).toLowerCase().includes('item')) &&
+              row.some(cell => String(cell).toLowerCase().includes('descrição') || String(cell).toLowerCase().includes('descricao'))) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+
+          if (headerRowIndex === -1) continue;
+
+          const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim());
+          const dataRows = rows.slice(headerRowIndex + 1);
+
+          // --- 2. MAPEAMENTO DINÂMICO DE COLUNAS ---
+          const getIdx = (names: string[]) => headers.findIndex(h => names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
+
+          const idxCodigo = getIdx(['item', 'código', 'cod']);
+          const idxNome = getIdx(['descrição', 'nome do exame', 'exame', 'descricao']);
+          const idxHonorario = getIdx(['honorário médico', 'honorário pix', 'hm']);
+          const idxExame = getIdx(['valor exame', 'exame cartão', 'cartão']);
+          const idxMaterial = getIdx(['contraste', 'materiais', 'material']);
+
+          const parseNum = (v: any) => {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'number') return v;
+            if (typeof v === 'string') {
+              const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+              const parsed = parseFloat(cleaned);
+              return isNaN(parsed) ? 0 : parsed;
+            }
+            return 0;
+          };
+
+          const parseRange = (v: any): { min: number; max: number } => {
+            if (!v) return { min: 0, max: 0 };
+            const s = String(v).toLowerCase();
+            const numbers = s.match(/\d+([.,]\d+)?/g);
+            if (numbers && numbers.length >= 2) {
+              const n1 = parseNum(numbers[0].replace(',', '.'));
+              const n2 = parseNum(numbers[1].replace(',', '.'));
+              return { min: Math.min(n1, n2), max: Math.max(n1, n2) };
+            }
+            const val = parseNum(v);
+            return { min: val, max: val };
+          };
+
+          const items: Omit<ValueTableItem, 'id'>[] = dataRows
+            .filter(row => row[idxNome] || row[idxCodigo])
+            .map((row) => {
+              const materialRange = parseRange(row[idxMaterial]);
+              return {
+                codigo: String(row[idxCodigo] || ""),
+                nome: String(row[idxNome] || ""),
+                honorario: parseNum(row[idxHonorario]),
+                exame_cartao: parseNum(row[idxExame]),
+                material_max: materialRange.max,
+                material_min: materialRange.min,
+                info: "",
+                honorarios_diferenciados: []
+              };
+            })
+            .filter(item => item.nome && (item.codigo || item.honorario > 0));
+
+          if (items.length > 0) {
+            allDataToImport.push({ categoryName: wsname, items });
           }
         }
 
-        if (headerRowIndex === -1) {
-          toast({
-            title: "Cabeçalho não encontrado",
-            description: "Não encontramos a linha com 'ITEM' e 'DESCRIÇÃO'. Verifique o arquivo.",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim());
-        const dataRows = rows.slice(headerRowIndex + 1);
-
-        // --- 2. MAPEAMENTO DINÂMICO DE COLUNAS ---
-        const getIdx = (names: string[]) => headers.findIndex(h => names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
-
-        const idxCodigo = getIdx(['item', 'código', 'cod']);
-        const idxNome = getIdx(['descrição', 'nome do exame', 'exame', 'descricao']);
-        const idxHonorario = getIdx(['honorário médico', 'honorário pix', 'hm']);
-        const idxExame = getIdx(['valor exame', 'exame cartão', 'cartão']);
-        const idxMaterial = getIdx(['contraste', 'materiais', 'material']);
-
-        const parseNum = (v: any) => {
-          if (v === null || v === undefined) return 0;
-          if (typeof v === 'number') return v;
-          if (typeof v === 'string') {
-            const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
-            const parsed = parseFloat(cleaned);
-            return isNaN(parsed) ? 0 : parsed;
-          }
-          return 0;
-        };
-
-        const parseRange = (v: any): { min: number; max: number } => {
-          if (!v) return { min: 0, max: 0 };
-          const s = String(v).toLowerCase();
-
-          // Se for algo como "de 500 a 1500" or "500 - 1500"
-          const numbers = s.match(/\d+([.,]\d+)?/g);
-          if (numbers && numbers.length >= 2) {
-            const n1 = parseNum(numbers[0].replace(',', '.'));
-            const n2 = parseNum(numbers[1].replace(',', '.'));
-            return { min: Math.min(n1, n2), max: Math.max(n1, n2) };
-          }
-
-          const val = parseNum(v);
-          return { min: val, max: val };
-        };
-
-        const mappedItems: Omit<ValueTableItem, 'id'>[] = dataRows
-          .filter(row => row[idxNome] || row[idxCodigo])
-          .map((row) => {
-            const materialRange = parseRange(row[idxMaterial]);
-            return {
-              codigo: String(row[idxCodigo] || ""),
-              nome: String(row[idxNome] || ""),
-              honorario: parseNum(row[idxHonorario]),
-              exame_cartao: parseNum(row[idxExame]),
-              material_max: materialRange.max,
-              material_min: materialRange.min,
-              info: "",
-              honorarios_diferenciados: []
-            };
-          })
-          .filter(item => item.nome && (item.codigo || item.honorario > 0));
-
-        if (mappedItems.length === 0) {
+        if (allDataToImport.length === 0) {
           toast({
             title: "Dados não encontrados",
-            description: "Não foi possível extrair dados válidos da planilha.",
+            description: "Não foi possível extrair dados válidos de nenhuma aba da planilha.",
             variant: "destructive"
           });
           return;
         }
 
         if (bulkUpsertValueTable) {
-          toast({ title: "Processando...", description: `Atualizando ${mappedItems.length} itens da categoria atual...` });
-          const result = await bulkUpsertValueTable(VIEW_TYPE, activeCategory, mappedItems);
+          toast({ title: "Sincronização iniciada", description: `Processando ${allDataToImport.length} categorias. Isso pode levar alguns segundos...` });
+
+          // Enviamos um objeto especial para indicar que é uma sincronização Global
+          // Usaremos categoryId como 'GLOBAL_REPLACE'
+          const result = await bulkUpsertValueTable(VIEW_TYPE, 'GLOBAL_REPLACE', allDataToImport as any);
+
           toast({
-            title: "Importação concluída!",
-            description: `${result.created} novos exames incluídos e ${result.updated} valores atualizados com sucesso.`,
+            title: "Sincronização concluída!",
+            description: "O banco de dados foi limpo e atualizado com todos os dados da planilha.",
           });
         }
       } catch (err) {
         console.error("Erro ao importar Excel:", err);
         toast({
-          title: "Erro no processamento",
-          description: "Ocorreu um erro ao ler o arquivo Excel.",
+          title: "Erro na sincronização",
+          description: "Ocorreu um erro ao processar o arquivo Excel.",
           variant: "destructive"
         });
       } finally {
