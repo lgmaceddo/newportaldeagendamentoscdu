@@ -170,6 +170,7 @@ interface DataContextType {
   // Funções de substituição total (para importação de Excel)
   setValueTableDataAndCategories: (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => void;
   isLoading?: boolean;
+  syncAllDataFromSupabase?: () => Promise<void>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -1069,7 +1070,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return JSON.stringify(dataToExport, null, 2);
   };
 
-  const importAllData = (jsonData: string) => {
+  const importAllData = async (jsonData: string): Promise<boolean> => {
     try {
       const parsedData = JSON.parse(jsonData);
       setUserName(parsedData.userName || '');

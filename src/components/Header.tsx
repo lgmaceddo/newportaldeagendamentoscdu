@@ -1,5 +1,6 @@
 import { Bell, MapPin, Phone, MessageCircle, Pencil, UserCircle2, Moon, Sun, LogOut, X, Clock, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect } from "react";
@@ -18,6 +19,8 @@ interface HeaderProps {
   headerTagData: HeaderTagInfo[];
   updateHeaderTag: (id: string, updates: Omit<HeaderTagInfo, "id" | "tag">) => void;
   onMigrationClick: () => void;
+  isLoading?: boolean;
+  onSyncClick?: () => void;
 }
 
 export const Header = ({
@@ -28,6 +31,8 @@ export const Header = ({
   headerTagData,
   updateHeaderTag,
   onMigrationClick,
+  isLoading,
+  onSyncClick,
 }: HeaderProps) => {
   const { theme, toggleTheme } = useTheme();
   const { signOut, user } = useAuth();
@@ -177,6 +182,29 @@ export const Header = ({
               </Button>
             </div>
             <div className="flex items-center space-x-4 flex-shrink-0">
+              {/* Sync Status Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "bg-primary-foreground/20 hover:bg-primary-foreground/30 transition-all text-primary-foreground font-bold",
+                  isLoading && "animate-pulse"
+                )}
+                onClick={onSyncClick}
+                disabled={isLoading}
+                title={isLoading ? "Sincronizando com o servidor..." : "Sincronizar dados agora"}
+              >
+                <div className="relative">
+                  <Database className={cn("h-5 w-5 text-primary-foreground font-bold", isLoading && "animate-spin-slow")} />
+                  {isLoading && (
+                    <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                    </span>
+                  )}
+                </div>
+              </Button>
+
               {/* Global Search */}
               <GlobalSearch searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 

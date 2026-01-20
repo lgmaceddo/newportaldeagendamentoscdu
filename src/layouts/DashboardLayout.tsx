@@ -36,7 +36,8 @@ export const DashboardLayout = () => {
         setUserName,
         headerTagData,
         updateHeaderTag,
-        isLoading
+        isLoading,
+        syncAllDataFromSupabase: loadAllDataFromSupabase
     } = useData();
 
     const { user } = useAuth();
@@ -105,22 +106,7 @@ export const DashboardLayout = () => {
         }
     }, [location.state]);
 
-    if (showLoader) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background flex-col gap-4">
-                <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                    <p className="text-muted-foreground animate-pulse">Carregando dados do servidor...</p>
-                </div>
-                <button
-                    onClick={() => setShowLoader(false)}
-                    className="text-xs text-primary underline hover:text-primary/80"
-                >
-                    Demorando muito? Entrar mesmo assim
-                </button>
-            </div>
-        );
-    }
+
 
     const handleSaveUserName = (name: string) => {
         setUserName(name);
@@ -159,6 +145,8 @@ export const DashboardLayout = () => {
                 headerTagData={headerTagData}
                 updateHeaderTag={updateHeaderTag}
                 onMigrationClick={() => setShowMigrationModal(true)}
+                isLoading={isLoading}
+                onSyncClick={loadAllDataFromSupabase}
             />
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar

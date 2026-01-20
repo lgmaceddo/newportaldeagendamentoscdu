@@ -1704,7 +1704,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       infoTags, infoData, addInfoTag, updateInfoTag, deleteInfoTag, reorderInfoTags, addInfoItem, updateInfoItem, deleteInfoItem,
       estomaterapiaTags, estomaterapiaData, addEstomaterapiaTag, updateEstomaterapiaTag, deleteEstomaterapiaTag, reorderEstomaterapiaTags, addEstomaterapiaItem, updateEstomaterapiaItem, deleteEstomaterapiaItem,
       hasUnsavedChanges, saveToLocalStorage, loadFromLocalStorage, exportAllData, importAllData, loadExamsFromDatabase, setValueTableDataAndCategories,
-      isLoading: loading
+      isLoading: loading,
+      syncAllDataFromSupabase: loadAllDataFromSupabase
     }}>
       {children}
     </DataContext.Provider>
