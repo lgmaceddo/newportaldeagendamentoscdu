@@ -193,7 +193,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [infoData, setInfoData] = useState<Record<string, InfoItem[]>>(initialInfoData);
   const [estomaterapiaTags, setEstomaterapiaTags] = useState<InfoTag[]>(initialEstomaterapiaTags);
   const [estomaterapiaData, setEstomaterapiaData] = useState<Record<string, InfoItem[]>>(initialEstomaterapiaData);
-  const [lastExcelSync, setLastExcelSync] = useState<string | undefined>(localStorage.getItem('last_excel_sync') || undefined);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const loadFromLocalStorage = () => {
@@ -1308,7 +1307,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loadAllDataFromSupabase();
     }
   };
-  const bulkUpsertValueTable = async (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[], skipReload: boolean = false): Promise<{ updated: number; created: number }> => {
+  const bulkUpsertValueTable = async (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[]): Promise<{ updated: number; created: number }> => {
     let created = 0;
     let updated = 0;
 
@@ -1326,13 +1325,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (item.codigo) codigoMap.set(item.codigo, item.id);
       });
 
-      // De-duplicate items by codigo to avoid primary key conflicts in the same batch
-      const uniqueItemsMap = new Map<string, Omit<ValueTableItem, 'id'>>();
-      items.forEach(item => {
-        if (item.codigo) uniqueItemsMap.set(item.codigo, item);
-      });
-
-      const toUpsert = Array.from(uniqueItemsMap.values()).map(item => {
+      const toUpsert = items.map(item => {
         const existingId = codigoMap.get(item.codigo);
         if (existingId) updated++; else created++;
 
@@ -1350,30 +1343,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       });
 
-      // 2. Perform upsert in chunks
+      // 2. Perform upsert in chunks to avoid large request body issues
       const chunkSize = 50;
       for (let i = 0; i < toUpsert.length; i += chunkSize) {
         const chunk = toUpsert.slice(i, i + chunkSize);
-        const { error: upsertError } = await supabase.from('value_table_items').upsert(chunk);
+        const { error: upsertError } = await supabase
+          .from('value_table_items')
+          .upsert(chunk);
+
         if (upsertError) throw upsertError;
       }
 
-      const now = new Date().toLocaleString('pt-BR');
-      setLastExcelSync(now);
-      localStorage.setItem('last_excel_sync', now);
-
-      // 3. Reload all data silently if not skipped
-      if (!skipReload) {
-        try {
-          await loadAllDataFromSupabase();
-        } catch (e) {
-          console.warn("Silent failure reloading data after bulk upsert:", e);
-        }
-      }
+      // 3. Reload all data to sync local state
+      await loadAllDataFromSupabase();
 
       return { updated, created };
     } catch (error) {
       console.error("Erro no bulk upsert de valores:", error);
+      toast.error("Erro ao sincronizar dados com o servidor.");
       throw error;
     }
   };
@@ -1766,7 +1753,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       examCategories, examData, addExamCategory, updateExamCategory, deleteExamCategory, reorderExamCategories, addExam, updateExam, deleteExam, syncValueTableToExams,
       contactCategories, contactData, addContactCategory, updateContactCategory, deleteContactCategory, reorderContactCategories, addContactGroup, updateContactGroup, deleteContactGroup, addContactPoint, updateContactPoint, deleteContactPoint,
       valueTableCategories, valueTableData, addValueCategory, updateValueCategory, deleteValueCategory, reorderValueCategories, addValueTable, moveAndUpdateValueTable, deleteValueTable, bulkUpsertValueTable,
-      lastExcelSync,
       professionalData, addProfessional, updateProfessional, deleteProfessional,
       officeData, addOffice, updateOffice, deleteOffice,
       noticeData, addNotice, updateNotice, deleteNotice,

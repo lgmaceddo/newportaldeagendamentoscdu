@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, FileText, Edit, Trash2, Save, X, Eye, Upload, FileSpreadsheet, Clock } from "lucide-react";
+import { Plus, FileText, Edit, Trash2, Save, X, Eye, Upload, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   const [editingValue, setEditingValue] = useState<(ValueTableItem & { oldCategoryId: string }) | undefined>();
   const [viewingValue, setViewingValue] = useState<ValueTableItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable, lastExcelSync, syncAllDataFromSupabase } = useData();
+  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable } = useData();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,156 +59,119 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
       try {
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
 
-        let totalUpdated = 0;
-        let totalCreated = 0;
-        let categoriesProcessed = 0;
+        // Usamos header: 1 para ler como array de arrays, facilitando pular linhas de título
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
-        toast({ title: "Iniciando sincronização...", description: `Analisando ${wb.SheetNames.length} abas...` });
-
-        for (const wsname of wb.SheetNames) {
-          const ws = wb.Sheets[wsname];
-          const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-          if (rows.length === 0) continue;
-
-          // --- 1. DETECTAR CATEGORIA ---
-          const findCategory = (str: string) => {
-            const normalized = String(str || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            if (!normalized) return null;
-
-            // Palavras-chave extras para garantir o match
-            const extraKeywords: Record<string, string[]> = {
-              "cardio": ["coracao", "cardiologia", "eco", "mapa", "holter"],
-              "ultrassom geral": ["ultrassom", "usg", "ecografia"],
-              "neurologia": ["eletroencefalo", "eeg", "cerebral"],
-              "mamografia": ["mama", "densitometria"]
-            };
-
-            return categories.find(c => {
-              const catName = c && c.name ? String(c.name) : "";
-              const catNorm = catName.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-              const keywords = extraKeywords[catNorm] || [];
-              return catNorm === normalized ||
-                (catNorm && catNorm.includes(normalized)) ||
-                (normalized && normalized.includes(catNorm)) ||
-                keywords.some(k => normalized.includes(k));
-            });
-          };
-
-          let targetCategory = findCategory(wsname);
-
-          if (!targetCategory) {
-            const firstCell = rows.find(r => r && r.length > 0)?.find(c => c !== null && c !== undefined);
-            if (firstCell !== undefined) targetCategory = findCategory(String(firstCell));
-          }
-
-          if (!targetCategory) {
-            if (wb.SheetNames.length === 1) {
-              targetCategory = categories.find(c => c.id === activeCategory);
-            } else {
-              continue;
-            }
-          }
-
-          if (!targetCategory) continue;
-
-          // --- 2. ENCONTRAR CABEÇALHO ---
-          let headerRowIndex = -1;
-          for (let i = 0; i < Math.min(rows.length, 15); i++) {
-            const row = rows[i];
-            if (row && Array.isArray(row) &&
-              row.some(cell => cell && String(cell).toLowerCase().includes('item')) &&
-              row.some(cell => cell && (String(cell).toLowerCase().includes('descrição') || String(cell).toLowerCase().includes('descricao')))) {
-              headerRowIndex = i;
-              break;
-            }
-          }
-
-          if (headerRowIndex === -1) continue;
-
-          // Garantir que headers seja um array denso de strings
-          const rawHeaders = rows[headerRowIndex];
-          const headers = Array.from(rawHeaders || []).map(h => String(h || "").toLowerCase().trim());
-          const dataRows = rows.slice(headerRowIndex + 1);
-
-          // --- 3. MAPEAMENTO E PARSING ---
-          const getIdx = (names: string[]) => headers.findIndex(h => h && names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
-          const idxCodigo = getIdx(['item', 'código', 'cod']);
-          const idxNome = getIdx(['descrição', 'nome do exame', 'exame', 'descricao']);
-          const idxHonorario = getIdx(['honorário médico', 'honorário pix', 'hm']);
-          const idxExame = getIdx(['valor exame', 'exame cartão', 'cartão']);
-          const idxMaterial = getIdx(['contraste', 'materiais', 'material']);
-
-          const parseNum = (v: any) => {
-            if (v === null || v === undefined || v === "") return 0;
-            if (typeof v === 'number') return v;
-            if (typeof v === 'string') {
-              const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.').replace(/[^0-9.]/g, '');
-              const parsed = parseFloat(cleaned);
-              return isNaN(parsed) ? 0 : parsed;
-            }
-            return 0;
-          };
-
-          const parseRange = (v: any): { min: number; max: number } => {
-            if (!v) return { min: 0, max: 0 };
-            const s = String(v).toLowerCase();
-            const numbers = s.match(/\d+([.,]\d+)?/g);
-            if (numbers && numbers.length >= 2) {
-              const n1 = parseNum(numbers[0]);
-              const n2 = parseNum(numbers[1]);
-              return { min: Math.min(n1, n2), max: Math.max(n1, n2) };
-            }
-            const val = parseNum(v);
-            return { min: val, max: val };
-          };
-
-          const mappedItems: Omit<ValueTableItem, 'id'>[] = dataRows
-            .filter(row => Array.isArray(row) && (row[idxNome] || row[idxCodigo]))
-            .map((row) => {
-              const materialRange = parseRange(row[idxMaterial]);
-              return {
-                codigo: String(row[idxCodigo] || ""),
-                nome: String(row[idxNome] || ""),
-                honorario: parseNum(row[idxHonorario]),
-                exame_cartao: parseNum(row[idxExame]),
-                material_max: materialRange.max,
-                material_min: materialRange.min,
-                info: "",
-                honorarios_diferenciados: []
-              };
-            })
-            .filter(item => item.nome && (item.codigo || item.honorario > 0));
-
-          if (mappedItems.length > 0 && bulkUpsertValueTable) {
-            // Usa skipReload: true para ser rápido dentro do loop
-            await bulkUpsertValueTable(VIEW_TYPE, targetCategory.id, mappedItems, true);
-            categoriesProcessed++;
-          }
-        }
-
-        if (categoriesProcessed > 0) {
-          // Faz um único reload ao final de tudo
-          if (syncAllDataFromSupabase) {
-            toast({ title: "Sincronizando...", description: "Atualizando dados finais na tela..." });
-            await syncAllDataFromSupabase();
-          }
+        if (rows.length === 0) {
           toast({
-            title: "Sincronização Completa!",
-            description: `${categoriesProcessed} categorias atualizadas com sucesso.`,
-          });
-        } else {
-          toast({
-            title: "Nada sincronizado",
-            description: "Não conseguimos mapear as abas do Excel para as categorias do portal. Verifique os nomes das abas.",
+            title: "Arquivo vazio",
+            description: "A planilha não contém dados ou o formato não é suportado.",
             variant: "destructive"
           });
+          return;
         }
-      } catch (err: any) {
+
+        // --- 1. ENCONTRAR A LINHA DE CABEÇALHO ---
+        let headerRowIndex = -1;
+        for (let i = 0; i < Math.min(rows.length, 10); i++) {
+          const row = rows[i];
+          if (row && row.some(cell => String(cell).toLowerCase().includes('item')) &&
+            row.some(cell => String(cell).toLowerCase().includes('descrição') || String(cell).toLowerCase().includes('descricao'))) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+
+        if (headerRowIndex === -1) {
+          toast({
+            title: "Cabeçalho não encontrado",
+            description: "Não encontramos a linha com 'ITEM' e 'DESCRIÇÃO'. Verifique o arquivo.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const headers = rows[headerRowIndex].map(h => String(h).toLowerCase().trim());
+        const dataRows = rows.slice(headerRowIndex + 1);
+
+        // --- 2. MAPEAMENTO DINÂMICO DE COLUNAS ---
+        const getIdx = (names: string[]) => headers.findIndex(h => names.some(n => h === n.toLowerCase() || h.includes(n.toLowerCase())));
+
+        const idxCodigo = getIdx(['item', 'código', 'cod']);
+        const idxNome = getIdx(['descrição', 'nome do exame', 'exame', 'descricao']);
+        const idxHonorario = getIdx(['honorário médico', 'honorário pix', 'hm']);
+        const idxExame = getIdx(['valor exame', 'exame cartão', 'cartão']);
+        const idxMaterial = getIdx(['contraste', 'materiais', 'material']);
+
+        const parseNum = (v: any) => {
+          if (v === null || v === undefined) return 0;
+          if (typeof v === 'number') return v;
+          if (typeof v === 'string') {
+            const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+          }
+          return 0;
+        };
+
+        const parseRange = (v: any): { min: number; max: number } => {
+          if (!v) return { min: 0, max: 0 };
+          const s = String(v).toLowerCase();
+
+          // Se for algo como "de 500 a 1500" or "500 - 1500"
+          const numbers = s.match(/\d+([.,]\d+)?/g);
+          if (numbers && numbers.length >= 2) {
+            const n1 = parseNum(numbers[0].replace(',', '.'));
+            const n2 = parseNum(numbers[1].replace(',', '.'));
+            return { min: Math.min(n1, n2), max: Math.max(n1, n2) };
+          }
+
+          const val = parseNum(v);
+          return { min: val, max: val };
+        };
+
+        const mappedItems: Omit<ValueTableItem, 'id'>[] = dataRows
+          .filter(row => row[idxNome] || row[idxCodigo])
+          .map((row) => {
+            const materialRange = parseRange(row[idxMaterial]);
+            return {
+              codigo: String(row[idxCodigo] || ""),
+              nome: String(row[idxNome] || ""),
+              honorario: parseNum(row[idxHonorario]),
+              exame_cartao: parseNum(row[idxExame]),
+              material_max: materialRange.max,
+              material_min: materialRange.min,
+              info: "",
+              honorarios_diferenciados: []
+            };
+          })
+          .filter(item => item.nome && (item.codigo || item.honorario > 0));
+
+        if (mappedItems.length === 0) {
+          toast({
+            title: "Dados não encontrados",
+            description: "Não foi possível extrair dados válidos da planilha.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (bulkUpsertValueTable) {
+          toast({ title: "Processando...", description: `Atualizando ${mappedItems.length} itens da categoria atual...` });
+          const result = await bulkUpsertValueTable(VIEW_TYPE, activeCategory, mappedItems);
+          toast({
+            title: "Importação concluída!",
+            description: `${result.created} novos exames incluídos e ${result.updated} valores atualizados com sucesso.`,
+          });
+        }
+      } catch (err) {
         console.error("Erro ao importar Excel:", err);
         toast({
-          title: "Erro na sincronização",
-          description: err.message || "Ocorreu um erro ao processar o arquivo. Verifique se o formato está correto.",
+          title: "Erro no processamento",
+          description: "Ocorreu um erro ao ler o arquivo Excel.",
           variant: "destructive"
         });
       } finally {
@@ -355,16 +318,7 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   };
 
   const generatePolipectomyInfo = () => {
-    return `⚠️ Importante: Caso seja identificada a necessidade de remoção de pólipos durante o exame, o procedimento será convertido para Polipectomia.
-
-✅ POLIPECTOMIA (ESÔFAGO, ESTÔMAGO E DUODENO)
-O valor total do procedimento é de R$ 1.795,00.
-* Este valor inclui a realização com sedação;
-* Em caso de necessidade de anestesia, o valor deve ser consultado diretamente com a UNIANEST: 📞 (14) 3206-3101 | (14) 3206-9435.
-
-📦 Materiais e Biópsia (Custos Adicionais):
-* Envio para biópsia: Acréscimo de R$ 400,00 a R$ 1.100,00 (dependendo da quantidade de amostras);
-* Taxa por pólipo: Acréscimo de R$ 400,00 a R$ 1.100,00 por formação retirada.`;
+    return ` ⚠️ *Importante:* Caso seja identificada a necessidade de remoção de pólipos durante o exame, ele será convertido para Polipectomia do Esôfago, Estômago e Duodeno. ✅ *Polipectomia do Esôfago, Estômago e Duodeno* *Valor do Procedimento:* R$ 1.795,00 • O exame por esse valor também é realizado com sedação. • Em caso de anestesia o valor é informado pela UNIANEST: 📞 (14) 3206-3101 | (14) 3206-9435. *Materiais e Biópsia* • Acréscimo de R$ 400,00 a R$ 1.100,00 pelo envio de material para biópsia (de acordo com a quantidade de amostras). • Acréscimo de formações cobrada por pólipo: R$ 400,00 a R$ 1100,00 `;
   };
 
   const generateScript = () => {
@@ -464,7 +418,7 @@ O valor total do procedimento é de R$ 1.795,00.
 
     // Adiciona a informação de Polipectomia se necessário
     if (needsPolipectomyInfo) {
-      script += "\n" + generatePolipectomyInfo() + "\n\n";
+      script += "\n" + generatePolipectomyInfo() + "\n";
     }
 
     script += `Para dúvidas sobre valores e condições de pagamento, por favor, entre em contato com nosso setor Financeiro:\n\n`;
@@ -529,22 +483,14 @@ O valor total do procedimento é de R$ 1.795,00.
                     accept=".xlsx, .xls, .csv"
                     className="hidden"
                   />
-                  <div className="flex flex-col items-center">
-                    <Button
-                      variant="outline"
-                      className="border-primary text-primary hover:bg-primary/10"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={categories.length === 0}
-                    >
-                      <FileSpreadsheet className="h-5 w-5 mr-2" /> Sincronizar Excel
-                    </Button>
-                    {lastExcelSync && (
-                      <span className="text-[10px] text-muted-foreground mt-1 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Sincronizado: {lastExcelSync}
-                      </span>
-                    )}
-                  </div>
+                  <Button
+                    variant="outline"
+                    className="border-primary text-primary hover:bg-primary/10"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={categories.length === 0}
+                  >
+                    <FileSpreadsheet className="h-5 w-5 mr-2" /> Sincronizar Excel
+                  </Button>
                   <Button
                     className="bg-primary hover:bg-primary/90"
                     onClick={() => setIsValueModalOpen(true)}
