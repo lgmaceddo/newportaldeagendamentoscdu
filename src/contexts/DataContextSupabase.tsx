@@ -1354,7 +1354,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           for (let i = 0; i < toInsert.length; i += chunkSize) {
             await supabase.from('value_table_items').insert(toInsert.slice(i, i + chunkSize));
           }
-          totalCreated += items.length;
+          totalCreated += toInsert.length;
         }
 
         await loadAllDataFromSupabase();
