@@ -169,6 +169,7 @@ interface DataContextType {
 
   // Funções de substituição total (para importação de Excel)
   setValueTableDataAndCategories: (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => void;
+  bulkUpsertValueTable?: (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[]) => Promise<{ updated: number; created: number }>;
   isLoading?: boolean;
   syncAllDataFromSupabase?: () => Promise<void>;
 }

@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
-import { Plus, FileText, Edit, Trash2, Save, X, Eye } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Plus, FileText, Edit, Trash2, Save, X, Eye, Upload, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Category, ValueTableItem } from "@/types/data";
@@ -45,8 +46,97 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   const [editingValue, setEditingValue] = useState<(ValueTableItem & { oldCategoryId: string }) | undefined>();
   const [viewingValue, setViewingValue] = useState<ValueTableItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories } = useData();
+  const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable } = useData();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const excelData = XLSX.utils.sheet_to_json(ws);
+
+        if (excelData.length === 0) {
+          toast({
+            title: "Arquivo vazio",
+            description: "A planilha não contém dados ou o formato não é suportado.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const mappedItems: Omit<ValueTableItem, 'id'>[] = excelData.map((row: any) => {
+          // Normaliza as chaves do Excel (case-insensitive e busca por fragmentos)
+          const findVal = (names: string[]) => {
+            const key = Object.keys(row).find(k =>
+              names.some(n => k.toLowerCase().trim() === n.toLowerCase().trim() ||
+                (n.length > 5 && k.toLowerCase().includes(n.toLowerCase())))
+            );
+            return key ? row[key] : undefined;
+          };
+
+          const parseNum = (v: any) => {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'number') return v;
+            if (typeof v === 'string') {
+              // Remove R$, espaços, pontos de milhar e converte vírgula em ponto
+              const cleaned = v.replace(/R\$/g, '').replace(/\s/g, '').replace(/\./g, '').replace(',', '.');
+              const parsed = parseFloat(cleaned);
+              return isNaN(parsed) ? 0 : parsed;
+            }
+            return 0;
+          };
+
+          const m_max = parseNum(findVal(['CONTRASTE, MATERIAIS E MEDICAMENTOS', 'MATERIAL', 'CONTRASTE', 'MATERIAIS']));
+          return {
+            codigo: String(findVal(['ITEM', 'CÓDIGO', 'COD']) || ""),
+            nome: String(findVal(['DESCRIÇÃO', 'NOME DO EXAME', 'EXAME', 'DESCRICAO']) || ""),
+            honorario: parseNum(findVal(['HONORÁRIO MÉDICO', 'HONORÁRIO PIX', 'HONORARIO', 'HM'])),
+            exame_cartao: parseNum(findVal(['VALOR EXAME', 'EXAME CARTÃO', 'EXAME (CARTÃO)', 'CARTÃO', 'VALOR'])),
+            material_max: m_max,
+            material_min: m_max, // Ajustado para ser igual ao máximo por padrão
+            info: "",
+            honorarios_diferenciados: []
+          };
+        }).filter(item => item.nome && (item.codigo || item.honorario > 0));
+
+        if (mappedItems.length === 0) {
+          toast({
+            title: "Erro na leitura",
+            description: "Não encontramos as colunas esperadas (ITEM, DESCRIÇÃO, etc). Verifique o cabeçalho do arquivo.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (bulkUpsertValueTable) {
+          toast({ title: "Processando...", description: `Aguarde enquanto atualizamos ${mappedItems.length} itens.` });
+          const result = await bulkUpsertValueTable(VIEW_TYPE, activeCategory, mappedItems);
+          toast({
+            title: "Importação concluída!",
+            description: `${result.created} novos exames incluídos e ${result.updated} valores atualizados com sucesso.`,
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao importar Excel:", err);
+        toast({
+          title: "Erro no processamento",
+          description: "Ocorreu um erro ao ler o arquivo Excel. Verifique se o arquivo não está corrompido.",
+          variant: "destructive"
+        });
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   // Check for search result in location state
   useEffect(() => {
@@ -342,13 +432,30 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
                 <Save className="h-4 w-4" />
               </Button>
               {canEditValores && (
-                <Button
-                  className="bg-primary hover:bg-primary/90"
-                  onClick={() => setIsValueModalOpen(true)}
-                  disabled={categories.length === 0}
-                >
-                  <Plus className="h-5 w-5 mr-2" /> Novo Valor
-                </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImportExcel}
+                    accept=".xlsx, .xls, .csv"
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    className="border-primary text-primary hover:bg-primary/10"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={categories.length === 0}
+                  >
+                    <FileSpreadsheet className="h-5 w-5 mr-2" /> Sincronizar Excel
+                  </Button>
+                  <Button
+                    className="bg-primary hover:bg-primary/90"
+                    onClick={() => setIsValueModalOpen(true)}
+                    disabled={categories.length === 0}
+                  >
+                    <Plus className="h-5 w-5 mr-2" /> Novo Valor
+                  </Button>
+                </div>
               )}
             </div>
           </div>
