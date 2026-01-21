@@ -56,20 +56,25 @@ function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; colu
     const columnMap: Record<keyof typeof KEY_MAP, number> = {};
     let dataRowIndex = -1;
 
-    // Procurar nas primeiras 10 linhas pelo cabeçalho
-    for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+    // Procurar nas primeiras 20 linhas pelo cabeçalho
+    for (let i = 0; i < Math.min(rawData.length, 20); i++) {
         const row = rawData[i];
+        if (!row) continue;
+
         const tempMap: Record<keyof typeof KEY_MAP, number> = {};
         let foundCount = 0;
 
         row.forEach((cell, index) => {
-            if (typeof cell === 'string') {
-                const normalizedCell = normalizeKey(cell);
+            if (cell !== undefined && cell !== null) {
+                const normalizedCell = normalizeKey(String(cell));
 
                 (Object.keys(KEY_MAP) as (keyof typeof KEY_MAP)[]).forEach(key => {
-                    if (KEY_MAP[key].some(searchKey => normalizeKey(searchKey) === normalizedCell)) {
-                        tempMap[key] = index;
-                        foundCount++;
+                    // Verificação mais flexivel (se o cabeçalho contém uma das palavras-chave)
+                    if (KEY_MAP[key].some(searchKey => normalizedCell.includes(normalizeKey(searchKey)))) {
+                        if (tempMap[key] === undefined) { // Pega a primeira ocorrência
+                            tempMap[key] = index;
+                            foundCount++;
+                        }
                     }
                 });
             }
@@ -77,14 +82,12 @@ function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; colu
 
         // Se encontrarmos pelo menos o código e a descrição, consideramos esta a linha de cabeçalho
         if (tempMap.codigo !== undefined && tempMap.descricao !== undefined) {
-            // Usar o mapa encontrado e definir a próxima linha como o início dos dados
             Object.assign(columnMap, tempMap);
             dataRowIndex = i + 1;
             return { dataRowIndex, columnMap };
         }
     }
 
-    // Se não encontrar, retorna -1 para indicar falha
     return { dataRowIndex: -1, columnMap: {} as Record<keyof typeof KEY_MAP, number> };
 }
 
@@ -147,6 +150,7 @@ export function importExcelData(file: File): Promise<{
                     }
 
                     dataRows.forEach((row) => {
+                        if (!row) return;
                         const codigo = row[columnMap.codigo];
                         const descricao = row[columnMap.descricao];
 
@@ -156,31 +160,29 @@ export function importExcelData(file: File): Promise<{
                         const normalizedCodigo = normalizeKey(String(codigo));
                         const normalizedDescricao = normalizeKey(String(descricao));
 
-                        // Lista de palavras proibidas que indicam cabeçalhos ou totais (comparação exata)
-                        const forbiddenKeywords = [
-                            'ITEM', 'DESCRICAO', 'CODIGO', 'PROCEDIMENTO', 'TOTAL',
-                            'COD', 'NOME', 'EXAME', 'VALOR', 'PRECO', 'HONORARIO',
-                            'HM', 'PRODUTO', 'VALORTOTAL', 'HONORARIOMEDICO', 'SUBTOTAL'
-                        ];
+                        // 1. Cabeçalhos e Títulos genéricos
+                        const headerKeywords = ['ITEM', 'DESCRICAO', 'CODIGO', 'PROCEDIMENTO', 'TOTAL', 'SUBTOTAL', 'VALOR', 'PRECO', 'HONORARIO', 'HM'];
 
-                        // Títulos específicos solicitados pelo usuário (podem ser parte da descrição)
+                        // 2. Frases de título específicas solicitadas pelo usuário
                         const specificTitlePhrases = [
-                            'ANATOMOPATOLOGICOENDOSCOPIAECOLONOSCOPIA',
-                            'ANATOMOPATOLOGICOANATOMED',
+                            'ANATOMOPATOLOGICO',
                             'ANESTESISTA',
-                            'VALORDOANESTESISTAUNIANEST'
+                            'VALORDOANESTESISTA',
+                            'UNIANEST',
+                            'ANATOMED'
                         ];
 
                         // Verifica se é uma linha de cabeçalho ou título
                         const isForbidden =
-                            // Caso 1: Código ou Descrição são exatamente uma das palavras proibidas
-                            forbiddenKeywords.some(kw => normalizedCodigo === kw || normalizedDescricao === kw) ||
-                            // Caso 2: Descrição contém uma das frases de título específicas
+                            // Caso A: Código ou Descrição são exatamente uma das palavras de cabeçalho
+                            headerKeywords.some(kw => normalizedCodigo === kw || normalizedDescricao === kw) ||
+                            // Caso B: O CÓDIGO contém palavras de cabeçalho (ex: "CDU / CODIGO") - CÓDIGOS REAIS NORMALMENTE NÃO CONTÊM ESTAS PALAVRAS
+                            (['CODIGO', 'ITEM', 'PROCEDIMENTO'].some(kw => normalizedCodigo.includes(kw))) ||
+                            // Caso C: Descrição contém uma das frases de título específicas (seja exato ou como parte de título de seção)
                             specificTitlePhrases.some(phrase => normalizedDescricao.includes(phrase)) ||
-                            // Caso 3: Combinações comuns de cabeçalho
-                            (normalizedCodigo === 'CODIGO' && normalizedDescricao === 'PROCEDIMENTO') ||
+                            // Caso D: Combinação clássica
                             (normalizedCodigo === 'ITEM' && normalizedDescricao === 'DESCRICAO') ||
-                            // Caso 4: Código inválido (muito longo, provavelmente um texto de título)
+                            // Caso E: Código inválido (muito longo, provavelmente um texto de título)
                             String(codigo).length > 25;
 
                         if (isForbidden) {
