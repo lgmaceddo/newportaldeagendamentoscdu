@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -15,7 +15,7 @@ interface SearchResult {
   type: string;
   section: string;
   navigationPath?: string;
-  navigationState?: any;
+  navigationState?: unknown;
   itemId?: string;
   categoryId?: string;
   viewType?: string;
@@ -47,12 +47,9 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
     };
   }, []);
 
-  // Perform search when searchTerm changes
-  useEffect(() => {
-    performSearch(searchTerm);
-  }, [searchTerm]);
 
-  const performSearch = (term: string) => {
+
+  const performSearch = useCallback((term: string) => {
     if (!term.trim()) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -104,13 +101,9 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
       const examArray = Array.isArray(exams) ? exams : [];
       examArray.forEach((exam: ExamItem) => {
         const title = exam.title || "";
-        const locationStr = Array.isArray(exam.location) 
-          ? exam.location.join(" ").toLowerCase() 
-          : (exam.location || "").toLowerCase();
-        const setorStr = exam.setor && Array.isArray(exam.setor) 
-          ? exam.setor.join(" ").toLowerCase() 
-          : (exam.setor || "").toLowerCase();
-        const extension = exam.extension || "";
+        const locationStr = Array.isArray(exam.location)
+          ? exam.location.join(" ").toLowerCase()
+          : String(exam.location || "").toLowerCase();
         const additionalInfo = exam.additionalInfo || "";
         const schedulingRules = exam.schedulingRules ? String(exam.schedulingRules) : "";
         const valueTableCode = exam.valueTableCode || "";
@@ -118,8 +111,6 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
         if (
           title.toLowerCase().includes(lowerTerm) ||
           locationStr.includes(lowerTerm) ||
-          setorStr.includes(lowerTerm) ||
-          extension.toLowerCase().includes(lowerTerm) ||
           additionalInfo.toLowerCase().includes(lowerTerm) ||
           schedulingRules.toLowerCase().includes(lowerTerm) ||
           valueTableCode.toLowerCase().includes(lowerTerm)
@@ -304,8 +295,8 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
       const ramal = office.ramal || "";
       const schedule = office.schedule || "";
       // Fix: Use office.specialties instead of undefined 'specialities'
-      const specialties = Array.isArray(office.specialties) 
-        ? office.specialties.join(', ') 
+      const specialties = Array.isArray(office.specialties)
+        ? office.specialties.join(', ')
         : "";
 
       if (
@@ -434,12 +425,17 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
 
     setSearchResults(foundResults.slice(0, 8)); // Limit to 8 results
     setShowSearchResults(foundResults.length > 0);
-  };
+  }, [scriptData, examData, contactData, valueTableData, professionalData, officeData, recadoData, infoData, estomaterapiaData]);
+
+  // Perform search when searchTerm changes
+  useEffect(() => {
+    performSearch(searchTerm);
+  }, [searchTerm, performSearch]);
 
   const handleResultClick = (result: SearchResult) => {
     setShowSearchResults(false);
     setSearchTerm("");
-    
+
     if (result.navigationPath) {
       // Clear any existing search state in location before navigating
       window.history.replaceState({}, document.title, "/");
@@ -493,7 +489,7 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
               setSearchResults([]);
               setShowSearchResults(false);
               // Clear any search state in location
-              if (window.location.state?.searchResult) {
+              if ((window.location as any).state?.searchResult) {
                 window.history.replaceState({}, document.title, window.location.pathname);
               }
             }}
@@ -526,9 +522,9 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
                       {result.type}
                     </span>
                   </div>
-                  <p 
-                    className="text-xs text-muted-foreground line-clamp-2" 
-                    dangerouslySetInnerHTML={{ __html: highlightText(result.content, searchTerm) }} 
+                  <p
+                    className="text-xs text-muted-foreground line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: highlightText(result.content, searchTerm) }}
                   />
                   <p className="text-xs text-muted-foreground mt-1">{result.section}</p>
                 </div>

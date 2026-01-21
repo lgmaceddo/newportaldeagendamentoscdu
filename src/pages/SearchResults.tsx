@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +15,10 @@ interface SearchResult {
   type: string;
   section: string;
   icon: React.ReactNode;
-  item: any;
+  item: unknown;
   // Add navigation info
   navigationPath?: string;
-  navigationState?: any;
+  navigationState?: unknown;
 }
 
 export default function SearchResults() {
@@ -30,21 +30,9 @@ export default function SearchResults() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Parse query parameter
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const query = params.get("q") || "";
-    setSearchTerm(query);
 
-    if (query) {
-      performSearch(query);
-    } else {
-      setResults([]);
-      setLoading(false);
-    }
-  }, [location.search]);
 
-  const performSearch = (term: string) => {
+  const performSearch = useCallback((term: string) => {
     setLoading(true);
     const lowerTerm = term.toLowerCase();
     const foundResults: SearchResult[] = [];
@@ -355,7 +343,21 @@ export default function SearchResults() {
 
     setResults(foundResults);
     setLoading(false);
-  };
+  }, [scriptData, examData, contactData, valueTableData, professionalData, officeData, recadoData, infoData, estomaterapiaData]);
+
+  // Parse query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const query = params.get("q") || "";
+    setSearchTerm(query);
+
+    if (query) {
+      performSearch(query);
+    } else {
+      setResults([]);
+      setLoading(false);
+    }
+  }, [location.search, performSearch]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
