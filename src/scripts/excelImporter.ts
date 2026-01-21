@@ -138,16 +138,7 @@ export function importExcelData(file: File): Promise<{
                     valuesByCategory[categoryId] = [];
 
                     const dataRows = rawData.slice(dataRowIndex);
-
-                    // Determinar os valores de material para esta categoria/sheet
-                    let material_min = 0;
-                    let material_max = 0;
-
-                    // Se a coluna 'material' foi detectada no cabeçalho, aplica o valor fixo
-                    if (columnMap.material !== undefined) {
-                        material_min = 500.00;
-                        material_max = 1500.00;
-                    }
+                    const seenCodesInSheet = new Set<string>();
 
                     dataRows.forEach((row) => {
                         if (!row) return;
@@ -160,34 +151,44 @@ export function importExcelData(file: File): Promise<{
                         const normalizedCodigo = normalizeKey(String(codigo));
                         const normalizedDescricao = normalizeKey(String(descricao));
 
-                        // 1. Cabeçalhos e Títulos genéricos
-                        const headerKeywords = ['ITEM', 'DESCRICAO', 'CODIGO', 'PROCEDIMENTO', 'TOTAL', 'SUBTOTAL', 'VALOR', 'PRECO', 'HONORARIO', 'HM'];
+                        // 1. Regras de Pular Linhas (Solicitadas pelo Usuário)
+                        // Pular se Nome do Exame (Descrição) contiver: DESCRIÇÃO, PROCEDIMENTO, TOTAL
+                        const skipByDescription = ['DESCRICAO', 'PROCEDIMENTO', 'TOTAL'].some(kw => normalizedDescricao.includes(kw));
 
-                        // 2. Frases de título específicas solicitadas pelo usuário
-                        const specificTitlePhrases = [
-                            'ANATOMOPATOLOGICO',
-                            'ANESTESISTA',
-                            'VALORDOANESTESISTA',
-                            'UNIANEST',
-                            'ANATOMED'
-                        ];
+                        // Pular se CÓDIGO (Item) contiver: ITEM, CÓDIGO
+                        const skipByCode = ['ITEM', 'CODIGO'].some(kw => normalizedCodigo.includes(kw));
 
-                        // Verifica se é uma linha de cabeçalho ou título
-                        const isForbidden =
-                            // Caso A: Código ou Descrição são exatamente uma das palavras de cabeçalho
-                            headerKeywords.some(kw => normalizedCodigo === kw || normalizedDescricao === kw) ||
-                            // Caso B: O CÓDIGO contém palavras de cabeçalho (ex: "CDU / CODIGO") - CÓDIGOS REAIS NORMALMENTE NÃO CONTÊM ESTAS PALAVRAS
-                            (['CODIGO', 'ITEM', 'PROCEDIMENTO'].some(kw => normalizedCodigo.includes(kw))) ||
-                            // Caso C: Descrição contém uma das frases de título específicas (seja exato ou como parte de título de seção)
-                            specificTitlePhrases.some(phrase => normalizedDescricao.includes(phrase)) ||
-                            // Caso D: Combinação clássica
-                            (normalizedCodigo === 'ITEM' && normalizedDescricao === 'DESCRICAO') ||
-                            // Caso E: Código inválido (muito longo, provavelmente um texto de título)
-                            String(codigo).length > 25;
-
-                        if (isForbidden) {
+                        if (skipByDescription || skipByCode) {
                             return;
                         }
+
+                        // 2. Extrair Material do Excel
+                        let material_min = 0;
+                        let material_max = 0;
+                        let materialText = '';
+
+                        if (columnMap.material !== undefined) {
+                            const rawMaterial = String(row[columnMap.material] || '').trim();
+                            if (rawMaterial) {
+                                materialText = rawMaterial;
+                                // Tenta extrair valores do formato "de R$ 500,00 a R$ 1.500,00"
+                                const matches = rawMaterial.match(/R\$\s*([\d.,]+)/g);
+                                if (matches && matches.length >= 2) {
+                                    material_min = parseMoneyValue(matches[0]);
+                                    material_max = parseMoneyValue(matches[1]);
+                                } else if (matches && matches.length === 1) {
+                                    material_min = parseMoneyValue(matches[0]);
+                                    material_max = material_min;
+                                }
+                            }
+                        }
+
+                        // 3. Verificação de Duplicidade (Baseado no código + nome para ser único na aba)
+                        const duplicateKey = `${normalizedCodigo}-${normalizedDescricao}`;
+                        if (seenCodesInSheet.has(duplicateKey)) {
+                            return;
+                        }
+                        seenCodesInSheet.add(duplicateKey);
 
                         // Parse dos valores monetários
                         const honorarioValue = columnMap.honorario !== undefined ? row[columnMap.honorario] : undefined;
@@ -196,18 +197,18 @@ export function importExcelData(file: File): Promise<{
                         const honorario = parseMoneyValue(honorarioValue);
                         const exameCartao = parseMoneyValue(exameCartaoValue);
 
-                        // Se não tem valor de honorário nem de exame, ignora (linhas de cabeçalho/total costumam vir zeradas)
-                        if (honorario === 0 && exameCartao === 0) return;
+                        // Se não tem valor nenhum, ignora
+                        if (honorario === 0 && exameCartao === 0 && material_max === 0) return;
 
                         // Limpeza do nome: remove hífens e espaços iniciais
                         let cleanedName = String(descricao).trim();
-                        cleanedName = cleanedName.replace(/^[\s-]+/, '').trim(); // Remove hífens e espaços no início
+                        cleanedName = cleanedName.replace(/^[\s-]+/, '').trim();
 
                         const item: ValueTableItem = {
                             id: `value-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                             codigo: String(codigo).trim(),
                             nome: cleanedName,
-                            info: '',
+                            info: materialText, // Salva o texto original do material no campo info/observação se necessário
                             honorario,
                             exame_cartao: exameCartao,
                             material_min,
