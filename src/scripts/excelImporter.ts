@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { ValueTableItem, Category } from '../types/data';
 
 // Define a flexible row type for parsing
-type FlexibleExcelRow = Record<string, any>;
+type FlexibleExcelRow = Record<string, unknown>;
 
 // Helper para obter uma cor consistente para a categoria (baseado no nome)
 function getCategoryColor(name: string): string {
@@ -18,8 +18,8 @@ function getCategoryColor(name: string): string {
     return colors[index];
 }
 
-function parseMoneyValue(value: string | undefined): number {
-    if (!value) return 0;
+function parseMoneyValue(value: unknown): number {
+    if (value === undefined || value === null) return 0;
 
     // Ensure value is treated as string for replacement operations
     const stringValue = String(value);
@@ -52,7 +52,7 @@ const KEY_MAP: Record<string, string[]> = {
  * @param rawData Array de arrays representando as linhas do Excel.
  * @returns Objeto com o índice da linha de dados e o mapa de colunas.
  */
-function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; columnMap: Record<keyof typeof KEY_MAP, number> } {
+function findHeaderAndMapColumns(rawData: unknown[][]): { dataRowIndex: number; columnMap: Record<keyof typeof KEY_MAP, number> } {
     const columnMap: Record<keyof typeof KEY_MAP, number> = {};
     let dataRowIndex = -1;
 
@@ -113,7 +113,7 @@ export function importExcelData(file: File): Promise<{
                 sheetNames.forEach((sheetName, sheetIndex) => {
                     const worksheet = workbook.Sheets[sheetName];
 
-                    const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+                    const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1 });
 
                     if (rawData.length === 0) return;
 
@@ -174,11 +174,8 @@ export function importExcelData(file: File): Promise<{
                         }
 
                         // Parse dos valores monetários
-                        const honorarioValue = columnMap.honorario !== undefined ? row[columnMap.honorario] : undefined;
-                        const exameCartaoValue = columnMap.exameCartao !== undefined ? row[columnMap.exameCartao] : undefined;
-
-                        const honorario = parseMoneyValue(honorarioValue);
-                        const exameCartao = parseMoneyValue(exameCartaoValue);
+                        const honorario = parseMoneyValue(columnMap.honorario !== undefined ? row[columnMap.honorario] : undefined);
+                        const exameCartao = parseMoneyValue(columnMap.exameCartao !== undefined ? row[columnMap.exameCartao] : undefined);
 
                         // Se não tem valor de honorário nem de exame, ignora (linhas de cabeçalho/total costumam vir zeradas)
                         if (honorario === 0 && exameCartao === 0) return;
