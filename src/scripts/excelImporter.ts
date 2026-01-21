@@ -156,20 +156,34 @@ export function importExcelData(file: File): Promise<{
                         const normalizedCodigo = normalizeKey(String(codigo));
                         const normalizedDescricao = normalizeKey(String(descricao));
 
-                        // Lista de palavras proibidas que indicam cabeçalhos ou totais
+                        // Lista de palavras proibidas que indicam cabeçalhos ou totais (comparação exata)
                         const forbiddenKeywords = [
                             'ITEM', 'DESCRICAO', 'CODIGO', 'PROCEDIMENTO', 'TOTAL',
                             'COD', 'NOME', 'EXAME', 'VALOR', 'PRECO', 'HONORARIO',
                             'HM', 'PRODUTO', 'VALORTOTAL', 'HONORARIOMEDICO', 'SUBTOTAL'
                         ];
 
-                        // Se o código ou a descrição CONTIVEREM uma dessas palavras ou 
-                        // se o código for inválido (muito longo), ignoramos a linha
-                        const isForbidden = forbiddenKeywords.some(kw =>
-                            normalizedCodigo.includes(kw) || normalizedDescricao.includes(kw)
-                        );
+                        // Títulos específicos solicitados pelo usuário (podem ser parte da descrição)
+                        const specificTitlePhrases = [
+                            'ANATOMOPATOLOGICOENDOSCOPIAECOLONOSCOPIA',
+                            'ANATOMOPATOLOGICOANATOMED',
+                            'ANESTESISTA',
+                            'VALORDOANESTESISTAUNIANEST'
+                        ];
 
-                        if (isForbidden || String(codigo).length > 20) {
+                        // Verifica se é uma linha de cabeçalho ou título
+                        const isForbidden =
+                            // Caso 1: Código ou Descrição são exatamente uma das palavras proibidas
+                            forbiddenKeywords.some(kw => normalizedCodigo === kw || normalizedDescricao === kw) ||
+                            // Caso 2: Descrição contém uma das frases de título específicas
+                            specificTitlePhrases.some(phrase => normalizedDescricao.includes(phrase)) ||
+                            // Caso 3: Combinações comuns de cabeçalho
+                            (normalizedCodigo === 'CODIGO' && normalizedDescricao === 'PROCEDIMENTO') ||
+                            (normalizedCodigo === 'ITEM' && normalizedDescricao === 'DESCRICAO') ||
+                            // Caso 4: Código inválido (muito longo, provavelmente um texto de título)
+                            String(codigo).length > 25;
+
+                        if (isForbidden) {
                             return;
                         }
 
