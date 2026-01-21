@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useData } from "@/contexts/DataContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ScriptItem, ExamItem, ContactGroup, ContactPoint, ValueTableItem, Professional, Office, RecadoItem, InfoItem } from "@/types/data";
 import { highlightText } from "@/lib/textUtils";
 
@@ -31,6 +31,7 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { scriptData, examData, contactData, valueTableData, professionalData, officeData, recadoData, infoData, estomaterapiaData } = useData();
 
   // Close search results when clicking outside
@@ -106,11 +107,7 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
         const title = exam.title || "";
         const locationStr = Array.isArray(exam.location)
           ? exam.location.join(" ").toLowerCase()
-          : (exam.location || "").toLowerCase();
-        const setorStr = exam.setor && Array.isArray(exam.setor)
-          ? exam.setor.join(" ").toLowerCase()
-          : (exam.setor || "").toLowerCase();
-        const extension = exam.extension || "";
+          : String(exam.location || "").toLowerCase();
         const additionalInfo = exam.additionalInfo || "";
         const schedulingRules = exam.schedulingRules ? String(exam.schedulingRules) : "";
         const valueTableCode = exam.valueTableCode || "";
@@ -118,8 +115,6 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
         if (
           title.toLowerCase().includes(lowerTerm) ||
           locationStr.includes(lowerTerm) ||
-          setorStr.includes(lowerTerm) ||
-          extension.toLowerCase().includes(lowerTerm) ||
           additionalInfo.toLowerCase().includes(lowerTerm) ||
           schedulingRules.toLowerCase().includes(lowerTerm) ||
           valueTableCode.toLowerCase().includes(lowerTerm)
@@ -493,7 +488,7 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
               setSearchResults([]);
               setShowSearchResults(false);
               // Clear any search state in location
-              if (window.location.state?.searchResult) {
+              if ((location.state as any)?.searchResult) {
                 window.history.replaceState({}, document.title, window.location.pathname);
               }
             }}
