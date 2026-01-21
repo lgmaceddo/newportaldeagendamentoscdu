@@ -140,7 +140,7 @@ interface DataContextType {
   exportAllData: () => string;
   importAllData: (jsonData: string) => Promise<boolean>;
   loadExamsFromDatabase: () => Promise<void>;
-  setValueTableDataAndCategories: (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => void;
+  setValueTableDataAndCategories: (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -1312,32 +1312,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (categoryId === 'GLOBAL_REPLACE') {
         const payload = items as { categoryName: string, items: Omit<ValueTableItem, 'id'>[] }[];
 
-        // 1. Limpeza total de itens e categorias de valores para este viewType
-        const { data: catsToDelete } = await supabase.from('value_table_categories').select('id').eq('view_type', viewType);
+        // 1. Limpeza total de itens e categorias de valores
+        const { data: catsToDelete } = await supabase.from('categories').select('id').eq('view_type', viewType);
         const catIds = catsToDelete?.map(c => c.id) || [];
 
         if (catIds.length > 0) {
           await supabase.from('value_table_items').delete().in('category_id', catIds);
-          await supabase.from('value_table_categories').delete().in('id', catIds);
+          await supabase.from('categories').delete().in('id', catIds);
         }
 
         let totalCreated = 0;
 
         for (const group of payload) {
           // 2. Criar a categoria
-          const newCatId = crypto.randomUUID();
-          await supabase.from('value_table_categories').insert({
-            id: newCatId,
+          const newCat = {
+            id: crypto.randomUUID(),
             name: group.categoryName,
             color: "#10605B",
             view_type: viewType,
-            order: payload.indexOf(group)
-          });
+            order_index: payload.indexOf(group)
+          };
+
+          await supabase.from('categories').insert(newCat);
 
           // 3. Preparar itens
           const toInsert = group.items.map(item => ({
             id: crypto.randomUUID(),
-            category_id: newCatId,
+            category_id: newCat.id,
             codigo: item.codigo,
             nome: item.nome,
             info: item.info || "",
@@ -1755,51 +1756,61 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setValueTableDataAndCategories = async (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => {
     setLoading(true);
     try {
-      console.log(`Starting Value Table Import for ${viewType}...`);
+      console.log(`Iniciando atualização total da Tabela de Valores (${viewType})...`);
 
-      // 1. Limpeza total para este viewType
-      const { data: existingCats, error: fetchError } = await supabase
+      // 1. Identificar todas as categorias de valores existentes para este viewType
+      const { data: existingCats, error: fetchErr } = await supabase
         .from('value_table_categories')
         .select('id')
         .eq('view_type', viewType);
 
-      if (fetchError) throw fetchError;
+      if (fetchErr) throw fetchErr;
 
       const catIds = existingCats?.map(c => c.id) || [];
 
+      // 2. Limpar itens e categorias (Ordem importa por causa de FK)
       if (catIds.length > 0) {
-        console.log(`Deleting ${catIds.length} existing categories and their items...`);
-        // Deletar itens primeiro por causa da Foreign Key
-        const { error: deleteItemsError } = await supabase.from('value_table_items').delete().in('category_id', catIds);
-        if (deleteItemsError) throw deleteItemsError;
+        // Primeiro deleta os itens
+        const { error: clearItemsErr } = await supabase
+          .from('value_table_items')
+          .delete()
+          .in('category_id', catIds);
 
-        const { error: deleteCatsError } = await supabase.from('value_table_categories').delete().in('id', catIds);
-        if (deleteCatsError) throw deleteCatsError;
+        if (clearItemsErr) {
+          console.error("Erro ao limpar itens:", clearItemsErr);
+        }
+
+        // Depois deleta as categorias
+        const { error: clearCatsErr } = await supabase
+          .from('value_table_categories')
+          .delete()
+          .in('id', catIds);
+
+        if (clearCatsErr) {
+          console.error("Erro ao limpar categorias:", clearCatsErr);
+          throw clearCatsErr;
+        }
       }
 
-      // 2. Inserção dos novos dados
-      const idMap = new Map<string, string>();
-
+      // 3. Inserir as novas categorias e seus itens
       for (const cat of categories) {
-        const newCatId = crypto.randomUUID();
-        idMap.set(cat.id, newCatId);
+        const { error: catErr } = await supabase
+          .from('value_table_categories')
+          .insert({
+            id: cat.id,
+            view_type: viewType,
+            name: cat.name,
+            color: cat.color || '#10605B',
+            order: categories.indexOf(cat)
+          });
 
-        console.log(`Inserting category: ${cat.name}`);
-        const { error: catInsertError } = await supabase.from('value_table_categories').insert({
-          id: newCatId,
-          view_type: viewType,
-          name: cat.name,
-          color: cat.color,
-          order: categories.indexOf(cat)
-        });
-
-        if (catInsertError) throw catInsertError;
+        if (catErr) throw catErr;
 
         const items = data[cat.id] || [];
         if (items.length > 0) {
           const itemsToInsert = items.map(item => ({
-            id: crypto.randomUUID(),
-            category_id: newCatId,
+            id: item.id,
+            category_id: cat.id,
             codigo: item.codigo,
             nome: item.nome,
             info: item.info || '',
@@ -1810,24 +1821,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             honorarios_diferenciados: JSON.stringify(item.honorarios_diferenciados || [])
           }));
 
-          // Inserir em blocos de 100 para eficiência e respeitar limites do Supabase
-          const chunkSize = 100;
+          // Inserir em blocos para evitar limites
+          const chunkSize = 50;
           for (let i = 0; i < itemsToInsert.length; i += chunkSize) {
-            const chunk = itemsToInsert.slice(i, i + chunkSize);
-            const { error: itemError } = await supabase.from('value_table_items').insert(chunk);
-            if (itemError) throw itemError;
+            const { error: itemErr } = await supabase
+              .from('value_table_items')
+              .insert(itemsToInsert.slice(i, i + chunkSize));
+            if (itemErr) throw itemErr;
           }
-          console.log(`Inserted ${items.length} items for ${cat.name}`);
         }
       }
 
-      toast.success("Tabela de valores substituída com sucesso!");
-      await loadAllDataFromSupabase();
+      // 4. Atualizar estado local
+      setValueTableCategories(prev => ({ ...prev, [viewType]: categories }));
+      setValueTableData(prev => ({ ...prev, [viewType]: data }));
+
+      toast.success(`Importação concluída: ${categories.length} categorias atualizadas.`);
     } catch (error) {
-      console.error("Erro ao importar tabela de valores:", error);
-      toast.error(`Erro ao importar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-      // Em caso de erro, recarrega para manter estado consistente
-      await loadAllDataFromSupabase();
+      console.error("Erro em setValueTableDataAndCategories:", error);
+      toast.error("Erro ao sincronizar dados com o servidor.");
+      loadAllDataFromSupabase(); // Forçar recarregamento para garantir consistência
     } finally {
       setLoading(false);
     }

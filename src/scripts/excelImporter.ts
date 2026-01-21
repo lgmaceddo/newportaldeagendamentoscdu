@@ -40,11 +40,11 @@ function normalizeKey(str: string): string {
 
 // Mapeamento de chaves de busca para colunas essenciais
 const KEY_MAP: Record<string, string[]> = {
-    codigo: ['ITEM', 'CODIGO', 'COD', 'CDU', 'PROCEDIMENTO', 'COD_PROCEDIMENTO', 'CODIGO PROCEDIMENTO'],
-    descricao: ['DESCRICAO', 'NOME', 'EXAME', 'PROCEDIMENTO', 'NOME EXAME', 'DESCRICAO PROCEDIMENTO'],
-    honorario: ['HONORARIOMEDICO', 'HM', 'HONORARIO', 'PIX', 'MEDICO', 'VALOR HM'],
-    exameCartao: ['VALOREXAME', 'PACOTECDU', 'VALORTOTAL', 'TOTAL', 'CARTAO', 'VALOR', 'PRECO', 'VALOR TOTAL'],
-    material: ['CONTRASTE', 'MATERIAIS', 'MATERIAL', 'MEDICAMENTOS', 'MATERIAISEMEDICAMENTOS', 'MAT/MED'], // Coluna de material
+    codigo: ['ITEM', 'CODIGO', 'COD', 'CDU', 'PROCEDIMENTO'],
+    descricao: ['DESCRICAO', 'NOME', 'EXAME', 'PROCEDIMENTO'],
+    honorario: ['HONORARIOMEDICO', 'HM', 'HONORARIO', 'PIX'],
+    exameCartao: ['VALOREXAME', 'PACOTECDU', 'VALORTOTAL', 'TOTAL', 'CARTAO'],
+    material: ['CONTRASTE', 'MATERIAIS', 'MATERIAL', 'MEDICAMENTOS', 'MATERIAISEMEDICAMENTOS'], // Coluna de material
 };
 
 /**
@@ -56,25 +56,20 @@ function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; colu
     const columnMap: Record<keyof typeof KEY_MAP, number> = {};
     let dataRowIndex = -1;
 
-    // Procurar nas primeiras 20 linhas pelo cabeçalho
-    for (let i = 0; i < Math.min(rawData.length, 20); i++) {
+    // Procurar nas primeiras 10 linhas pelo cabeçalho
+    for (let i = 0; i < Math.min(rawData.length, 10); i++) {
         const row = rawData[i];
-        if (!row) continue;
-
         const tempMap: Record<keyof typeof KEY_MAP, number> = {};
         let foundCount = 0;
 
         row.forEach((cell, index) => {
-            if (cell !== undefined && cell !== null) {
-                const normalizedCell = normalizeKey(String(cell));
+            if (typeof cell === 'string') {
+                const normalizedCell = normalizeKey(cell);
 
                 (Object.keys(KEY_MAP) as (keyof typeof KEY_MAP)[]).forEach(key => {
-                    // Verificação mais flexivel (se o cabeçalho contém uma das palavras-chave)
-                    if (KEY_MAP[key].some(searchKey => normalizedCell.includes(normalizeKey(searchKey)))) {
-                        if (tempMap[key] === undefined) { // Pega a primeira ocorrência
-                            tempMap[key] = index;
-                            foundCount++;
-                        }
+                    if (KEY_MAP[key].some(searchKey => normalizeKey(searchKey) === normalizedCell)) {
+                        tempMap[key] = index;
+                        foundCount++;
                     }
                 });
             }
@@ -82,12 +77,14 @@ function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; colu
 
         // Se encontrarmos pelo menos o código e a descrição, consideramos esta a linha de cabeçalho
         if (tempMap.codigo !== undefined && tempMap.descricao !== undefined) {
+            // Usar o mapa encontrado e definir a próxima linha como o início dos dados
             Object.assign(columnMap, tempMap);
             dataRowIndex = i + 1;
             return { dataRowIndex, columnMap };
         }
     }
 
+    // Se não encontrar, retorna -1 para indicar falha
     return { dataRowIndex: -1, columnMap: {} as Record<keyof typeof KEY_MAP, number> };
 }
 
@@ -127,10 +124,10 @@ export function importExcelData(file: File): Promise<{
                         return;
                     }
 
-                    const categoryId = `vt-cat-${sheetIndex}-${Date.now()}`;
+                    const categoryId = crypto.randomUUID();
                     const category: Category = {
                         id: categoryId,
-                        name: sheetName.toUpperCase(),
+                        name: sheetName.trim().toUpperCase(),
                         color: getCategoryColor(sheetName),
                     };
 
@@ -140,68 +137,60 @@ export function importExcelData(file: File): Promise<{
                     const dataRows = rawData.slice(dataRowIndex);
 
                     // Determinar os valores de material para esta categoria/sheet
-                    const seenCodesInSheet = new Set<string>();
+                    let material_min = 0;
+                    let material_max = 0;
+
+                    // Se a coluna 'material' foi detectada no cabeçalho, aplica o valor fixo
+                    if (columnMap.material !== undefined) {
+                        material_min = 0; // Removido valor fixo para evitar erros de interpretação
+                        material_max = 0;
+                    }
 
                     dataRows.forEach((row) => {
-                        if (!row) return;
                         const codigo = row[columnMap.codigo];
                         const descricao = row[columnMap.descricao];
 
                         // Validação básica
                         if (!codigo || !descricao || String(codigo).trim() === '' || String(descricao).trim() === '') return;
 
-                        const normalizedCodigo = String(codigo).trim().toUpperCase();
-                        const normalizedDescricao = String(descricao).trim().toUpperCase();
+                        // Ignora linhas que são obviamente cabeçalhos repetidos ou totais
+                        const normalizedDescricao = normalizeKey(String(descricao));
+                        const normalizedCodigo = normalizeKey(String(codigo));
 
-                        // 1. Regras de Pular Linhas (Solicitadas pelo Usuário)
-                        // Pular se Nome do Exame (Descrição) contiver: DESCRIÇÃO, PROCEDIMENTO, TOTAL
-                        if (['DESCRIÇÃO', 'DESCRICAO', 'PROCEDIMENTO', 'TOTAL'].some(kw => normalizedDescricao.includes(kw))) return;
+                        // Se o código for igual ao cabeçalho "ITEM", "CODIGO", etc, ignora
+                        if (KEY_MAP.codigo.some(k => normalizeKey(k) === normalizedCodigo)) return;
 
-                        // Pular se CÓDIGO (Item) contiver: ITEM, CÓDIGO
-                        if (['ITEM', 'CÓDIGO', 'CODIGO'].some(kw => normalizedCodigo.includes(kw))) return;
-
-                        // 2. Verificação de Duplicidade
-                        const duplicateKey = `${normalizedCodigo}-${normalizedDescricao}`;
-                        if (seenCodesInSheet.has(duplicateKey)) return;
-                        seenCodesInSheet.add(duplicateKey);
-
-                        // 3. Lógica de Material (Solicitada pelo Usuário)
-                        // Se o campo de material contiver qualquer valor, assume a variação 500 a 1500
-                        let material_min = 0;
-                        let material_max = 0;
-                        let materialText = '';
-
-                        if (columnMap.material !== undefined) {
-                            materialText = String(row[columnMap.material] || '').trim();
-                            if (materialText) {
-                                material_min = 500;
-                                material_max = 1500;
-                            }
+                        // Lista de palavras que indicam totais ou headers indesejados
+                        const skipKeywords = ['TOTAL', 'VALORTOTAL', 'HONORARIOMEDICO', 'REPASSE', 'VALOREXAME'];
+                        if (skipKeywords.some(keyword => normalizedDescricao === keyword || normalizedCodigo === keyword)) {
+                            return;
                         }
 
                         // Parse dos valores monetários
                         const honorarioValue = columnMap.honorario !== undefined ? row[columnMap.honorario] : undefined;
                         const exameCartaoValue = columnMap.exameCartao !== undefined ? row[columnMap.exameCartao] : undefined;
+                        const materialValue = columnMap.material !== undefined ? row[columnMap.material] : undefined;
 
                         const honorario = parseMoneyValue(honorarioValue);
                         const exameCartao = parseMoneyValue(exameCartaoValue);
+                        const material = parseMoneyValue(materialValue);
 
-                        // Se não tem valor nenhum, ignora
-                        if (honorario === 0 && exameCartao === 0 && material_max === 0) return;
+                        // Se não tem valor nenhum e não é material, ignora
+                        if (honorario === 0 && exameCartao === 0 && material === 0) return;
 
                         // Limpeza do nome: remove hífens e espaços iniciais
                         let cleanedName = String(descricao).trim();
-                        cleanedName = cleanedName.replace(/^[\s-]+/, '').trim();
+                        cleanedName = cleanedName.replace(/^[\s-]+/, '').trim(); // Remove hífens e espaços no início
 
                         const item: ValueTableItem = {
-                            id: `value-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                            id: crypto.randomUUID(),
                             codigo: String(codigo).trim(),
                             nome: cleanedName,
-                            info: materialText,
+                            info: '',
                             honorario,
                             exame_cartao: exameCartao,
-                            material_min,
-                            material_max,
+                            material_min: material, // Usa o valor da coluna se existir
+                            material_max: material,
                             honorarios_diferenciados: []
                         };
 

@@ -133,50 +133,22 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
             return { min: val, max: val };
           };
 
-          const items: Omit<ValueTableItem, 'id'>[] = [];
-          const seenInSheet = new Set<string>();
-
-          dataRows.forEach((row) => {
-            if (!row || (!row[idxNome] && !row[idxCodigo])) return;
-
-            const codigo = String(row[idxCodigo] || "").trim();
-            const nome = String(row[idxNome] || "").trim();
-            const normalizedCodigo = codigo.toUpperCase();
-            const normalizedNome = nome.toUpperCase();
-
-            // 1. REGRAS DE PULAR LINHAS (Solicitadas pelo Usuário)
-            // Pular se Nome do Exame contiver: DESCRIÇÃO, PROCEDIMENTO, TOTAL
-            if (['DESCRIÇÃO', 'DESCRICAO', 'PROCEDIMENTO', 'TOTAL'].some(kw => normalizedNome.includes(kw))) return;
-            // Pular se CÓDIGO contiver: ITEM, CÓDIGO, CODIGO
-            if (['ITEM', 'CÓDIGO', 'CODIGO'].some(kw => normalizedCodigo.includes(kw))) return;
-
-            // 2. VERIFICAÇÃO DE DUPLICIDADE
-            const dupKey = `${normalizedCodigo}-${normalizedNome}`;
-            if (seenInSheet.has(dupKey)) return;
-            seenInSheet.add(dupKey);
-
-            // 3. LOGICA DE MATERIAL (Solicitada pelo Usuário)
-            // Se o campo de material contiver qualquer valor, assume a variação 500 a 1500
-            const rawMaterial = String(row[idxMaterial] || "").trim();
-            let material_min = 0;
-            let material_max = 0;
-
-            if (rawMaterial) {
-              material_min = 500;
-              material_max = 1500;
-            }
-
-            items.push({
-              codigo,
-              nome,
-              honorario: parseNum(row[idxHonorario]),
-              exame_cartao: parseNum(row[idxExame]),
-              material_max,
-              material_min,
-              info: rawMaterial, // Aloca a descrição original do material no campo info (opcional)
-              honorarios_diferenciados: []
-            });
-          });
+          const items: Omit<ValueTableItem, 'id'>[] = dataRows
+            .filter(row => row && (row[idxNome] || row[idxCodigo]))
+            .map((row) => {
+              const materialRange = parseRange(row[idxMaterial]);
+              return {
+                codigo: String(row[idxCodigo] || ""),
+                nome: String(row[idxNome] || ""),
+                honorario: parseNum(row[idxHonorario]),
+                exame_cartao: parseNum(row[idxExame]),
+                material_max: materialRange.max,
+                material_min: materialRange.min,
+                info: "",
+                honorarios_diferenciados: []
+              };
+            })
+            .filter(item => item.nome && (item.codigo || item.honorario > 0 || item.exame_cartao > 0));
 
           if (items.length > 0) {
             allDataToImport.push({ categoryName: wsname, items });

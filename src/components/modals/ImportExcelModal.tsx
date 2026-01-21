@@ -16,14 +16,13 @@ interface ImportExcelModalProps {
 const GERAL_CATEGORY_ID = 'vt-cat-geral';
 
 export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) {
-  const { 
-    replaceAllValueTableData, // Função antiga, vamos substituí-la por uma nova lógica de substituição total
+  const {
     saveToLocalStorage,
     setValueTableDataAndCategories // Nova função para substituir tudo
   } = useData();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [preview, setPreview] = useState<{ 
-    totalItems: number; 
+  const [preview, setPreview] = useState<{
+    totalItems: number;
     categories: Category[];
     values: Record<string, ValueTableItem[]>;
   } | null>(null);
@@ -42,7 +41,7 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
 
     try {
       const { values, categories } = await importExcelData(file);
-      
+
       const totalItems = Object.values(values).reduce((sum, items) => sum + items.length, 0);
 
       if (totalItems === 0) {
@@ -50,7 +49,7 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
         setPreview(null);
         return;
       }
-      
+
       setPreview({
         totalItems,
         categories,
@@ -66,7 +65,7 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!preview) return;
 
     setIsProcessing(true);
@@ -75,21 +74,21 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
       // 1. Substitui todas as categorias e dados de valores
       // A importação agora substitui TUDO, não apenas a categoria GERAL.
       // O DataContext precisa de uma função para lidar com isso.
-      
+
       // Criando a nova estrutura de dados para o DataContext (viewType: GERAL)
       const newCategories: Category[] = preview.categories;
       const newValues: Record<string, ValueTableItem[]> = preview.values;
-      
+
       // Chamando a função de substituição total (que criaremos no DataContext)
-      setValueTableDataAndCategories('GERAL', newCategories, newValues);
+      await setValueTableDataAndCategories('GERAL', newCategories, newValues);
 
       // 2. Salva no localStorage
       saveToLocalStorage();
-      
+
       toast.success(`Importação concluída! ${preview.totalItems} exames foram importados em ${preview.categories.length} categorias.`);
       onOpenChange(false);
       setPreview(null);
-      
+
       // Limpa o input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -142,7 +141,7 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
               <div className="p-4 bg-primary/10 rounded-full">
                 <Upload className="h-8 w-8 text-primary" />
               </div>
-              
+
               <div className="text-center space-y-2">
                 <p className="text-sm font-medium">
                   {fileInputRef.current?.files?.[0]?.name || 'Selecione o arquivo Excel'}
@@ -160,7 +159,7 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
                 className="hidden"
                 id="excel-upload"
               />
-              
+
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}

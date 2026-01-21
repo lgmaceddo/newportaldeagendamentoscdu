@@ -168,8 +168,8 @@ interface DataContextType {
   loadExamsFromDatabase: () => Promise<void>;
 
   // Funções de substituição total (para importação de Excel)
-  setValueTableDataAndCategories: (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => void;
-  bulkUpsertValueTable?: (viewType: string, categoryId: string, items: any) => Promise<{ updated: number; created: number }>;
+  setValueTableDataAndCategories: (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => Promise<void>;
+  bulkUpsertValueTable?: (viewType: string, categoryId: string, items: Omit<ValueTableItem, 'id'>[]) => Promise<{ updated: number; created: number }>;
   isLoading?: boolean;
   syncAllDataFromSupabase?: () => Promise<void>;
 }
@@ -1108,7 +1108,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     console.log('Loading exams from database...');
   };
 
-  const setValueTableDataAndCategories = (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => {
+  const setValueTableDataAndCategories = async (viewType: string, categories: Category[], data: Record<string, ValueTableItem[]>) => {
     setValueTableCategories(prev => ({
       ...prev,
       [viewType]: categories
