@@ -7,7 +7,7 @@ type FlexibleExcelRow = Record<string, any>;
 // Helper para obter uma cor consistente para a categoria (baseado no nome)
 function getCategoryColor(name: string): string {
     const colors = [
-        'text-teal-800', 'text-blue-800', 'text-red-800', 'text-purple-800', 
+        'text-teal-800', 'text-blue-800', 'text-red-800', 'text-purple-800',
         'text-orange-800', 'text-green-800', 'text-pink-800', 'text-indigo-800'
     ];
     let hash = 0;
@@ -19,32 +19,32 @@ function getCategoryColor(name: string): string {
 }
 
 function parseMoneyValue(value: string | undefined): number {
-  if (!value) return 0;
-  
-  // Ensure value is treated as string for replacement operations
-  const stringValue = String(value);
-  
-  // Remove "R$", espaços, e pontos de milhar
-  const cleaned = stringValue.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
-  const parsed = parseFloat(cleaned);
-  
-  return isNaN(parsed) ? 0 : parsed;
+    if (!value) return 0;
+
+    // Ensure value is treated as string for replacement operations
+    const stringValue = String(value);
+
+    // Remove "R$", espaços, e pontos de milhar
+    const cleaned = stringValue.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
+    const parsed = parseFloat(cleaned);
+
+    return isNaN(parsed) ? 0 : parsed;
 }
 
 // Helper to normalize string (remove accents, convert to uppercase, remove non-alphanumeric)
 function normalizeKey(str: string): string {
-  if (typeof str !== 'string') return '';
-  // Remove acentos, caracteres não alfanuméricos (exceto espaços), e converte para maiúsculas
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9\s]/g, '').replace(/\s/g, '');
+    if (typeof str !== 'string') return '';
+    // Remove acentos, caracteres não alfanuméricos (exceto espaços), e converte para maiúsculas
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9\s]/g, '').replace(/\s/g, '');
 }
 
 // Mapeamento de chaves de busca para colunas essenciais
 const KEY_MAP: Record<string, string[]> = {
-    codigo: ['ITEM', 'CODIGO', 'COD', 'CDU', 'PROCEDIMENTO'],
-    descricao: ['DESCRICAO', 'NOME', 'EXAME', 'PROCEDIMENTO'],
-    honorario: ['HONORARIOMEDICO', 'HM', 'HONORARIO', 'PIX'],
-    exameCartao: ['VALOREXAME', 'PACOTECDU', 'VALORTOTAL', 'TOTAL', 'CARTAO'],
-    material: ['CONTRASTE', 'MATERIAIS', 'MATERIAL', 'MEDICAMENTOS', 'MATERIAISEMEDICAMENTOS'], // Coluna de material
+    codigo: ['ITEM', 'CODIGO', 'COD', 'CDU', 'PROCEDIMENTO', 'COD_PROCEDIMENTO', 'CODIGO PROCEDIMENTO'],
+    descricao: ['DESCRICAO', 'NOME', 'EXAME', 'PROCEDIMENTO', 'NOME EXAME', 'DESCRICAO PROCEDIMENTO'],
+    honorario: ['HONORARIOMEDICO', 'HM', 'HONORARIO', 'PIX', 'MEDICO', 'VALOR HM'],
+    exameCartao: ['VALOREXAME', 'PACOTECDU', 'VALORTOTAL', 'TOTAL', 'CARTAO', 'VALOR', 'PRECO', 'VALOR TOTAL'],
+    material: ['CONTRASTE', 'MATERIAIS', 'MATERIAL', 'MEDICAMENTOS', 'MATERIAISEMEDICAMENTOS', 'MAT/MED'], // Coluna de material
 };
 
 /**
@@ -65,7 +65,7 @@ function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; colu
         row.forEach((cell, index) => {
             if (typeof cell === 'string') {
                 const normalizedCell = normalizeKey(cell);
-                
+
                 (Object.keys(KEY_MAP) as (keyof typeof KEY_MAP)[]).forEach(key => {
                     if (KEY_MAP[key].some(searchKey => normalizeKey(searchKey) === normalizedCell)) {
                         tempMap[key] = index;
@@ -90,121 +90,121 @@ function findHeaderAndMapColumns(rawData: any[][]): { dataRowIndex: number; colu
 
 
 export function importExcelData(file: File): Promise<{
-  values: Record<string, ValueTableItem[]>; // Retorna valores agrupados por CategoryId
-  categories: Category[];
+    values: Record<string, ValueTableItem[]>; // Retorna valores agrupados por CategoryId
+    categories: Category[];
 }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        
-        const importedCategories: Category[] = [];
-        const valuesByCategory: Record<string, ValueTableItem[]> = {};
-        
-        const sheetNames = workbook.SheetNames;
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-        if (sheetNames.length === 0) {
-            return resolve({ values: {}, categories: [] });
-        }
+        reader.onload = (e) => {
+            try {
+                const data = e.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
 
-        sheetNames.forEach((sheetName, sheetIndex) => {
-            const worksheet = workbook.Sheets[sheetName];
-            
-            const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
-            
-            if (rawData.length === 0) return;
+                const importedCategories: Category[] = [];
+                const valuesByCategory: Record<string, ValueTableItem[]> = {};
 
-            const { dataRowIndex, columnMap } = findHeaderAndMapColumns(rawData);
-            
-            if (dataRowIndex === -1) {
-                console.warn(`Aviso: Não foi possível identificar o cabeçalho na aba "${sheetName}". Ignorando esta aba.`);
-                return;
-            }
+                const sheetNames = workbook.SheetNames;
 
-            const categoryId = `vt-cat-${sheetIndex}-${Date.now()}`;
-            const category: Category = {
-                id: categoryId,
-                name: sheetName.toUpperCase(),
-                color: getCategoryColor(sheetName),
-            };
-            
-            importedCategories.push(category);
-            valuesByCategory[categoryId] = [];
-
-            const dataRows = rawData.slice(dataRowIndex);
-            
-            // Determinar os valores de material para esta categoria/sheet
-            let material_min = 0;
-            let material_max = 0;
-            
-            // Se a coluna 'material' foi detectada no cabeçalho, aplica o valor fixo
-            if (columnMap.material !== undefined) {
-                material_min = 500.00;
-                material_max = 1500.00;
-            }
-
-            dataRows.forEach((row) => {
-                const codigo = row[columnMap.codigo];
-                const descricao = row[columnMap.descricao];
-                
-                // Validação básica
-                if (!codigo || !descricao || String(codigo).trim() === '' || String(descricao).trim() === '') return;
-
-                // Ignora linhas que parecem ser cabeçalhos ou totais
-                const normalizedDescricao = normalizeKey(String(descricao));
-                if (normalizedDescricao.includes('HONORARIO') || normalizedDescricao.includes('VALOR') || String(codigo).length > 20) {
-                    return;
+                if (sheetNames.length === 0) {
+                    return resolve({ values: {}, categories: [] });
                 }
 
-                // Parse dos valores monetários
-                const honorarioValue = columnMap.honorario !== undefined ? row[columnMap.honorario] : undefined;
-                const exameCartaoValue = columnMap.exameCartao !== undefined ? row[columnMap.exameCartao] : undefined;
+                sheetNames.forEach((sheetName, sheetIndex) => {
+                    const worksheet = workbook.Sheets[sheetName];
 
-                const honorario = parseMoneyValue(honorarioValue);
-                const exameCartao = parseMoneyValue(exameCartaoValue);
-                
-                // Se não tem valor de exame nem material, ignora
-                if (honorario === 0 && exameCartao === 0 && material_max === 0) return;
-                
-                // Limpeza do nome: remove hífens e espaços iniciais
-                let cleanedName = String(descricao).trim();
-                cleanedName = cleanedName.replace(/^[\s-]+/, '').trim(); // Remove hífens e espaços no início
-                
-                const item: ValueTableItem = {
-                    id: `value-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    codigo: String(codigo).trim(),
-                    nome: cleanedName,
-                    info: '',
-                    honorario,
-                    exame_cartao: exameCartao,
-                    material_min, 
-                    material_max, 
-                    honorarios_diferenciados: []
-                };
-                
-                valuesByCategory[categoryId].push(item);
-            });
-            
-            // Ordena alfabeticamente pelo nome do exame dentro da categoria
-            valuesByCategory[categoryId].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-        });
-        
-        // Ordena as categorias por nome
-        importedCategories.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-        
-        resolve({
-          values: valuesByCategory,
-          categories: importedCategories
-        });
-      } catch (error) {
-        reject(error);
-      }
-    };
-    
-    reader.onerror = () => reject(reader.error);
-    reader.readAsBinaryString(file);
-  });
+                    const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+
+                    if (rawData.length === 0) return;
+
+                    const { dataRowIndex, columnMap } = findHeaderAndMapColumns(rawData);
+
+                    if (dataRowIndex === -1) {
+                        console.warn(`Aviso: Não foi possível identificar o cabeçalho na aba "${sheetName}". Ignorando esta aba.`);
+                        return;
+                    }
+
+                    const categoryId = `vt-cat-${sheetIndex}-${Date.now()}`;
+                    const category: Category = {
+                        id: categoryId,
+                        name: sheetName.toUpperCase(),
+                        color: getCategoryColor(sheetName),
+                    };
+
+                    importedCategories.push(category);
+                    valuesByCategory[categoryId] = [];
+
+                    const dataRows = rawData.slice(dataRowIndex);
+
+                    // Determinar os valores de material para esta categoria/sheet
+                    let material_min = 0;
+                    let material_max = 0;
+
+                    // Se a coluna 'material' foi detectada no cabeçalho, aplica o valor fixo
+                    if (columnMap.material !== undefined) {
+                        material_min = 500.00;
+                        material_max = 1500.00;
+                    }
+
+                    dataRows.forEach((row) => {
+                        const codigo = row[columnMap.codigo];
+                        const descricao = row[columnMap.descricao];
+
+                        // Validação básica
+                        if (!codigo || !descricao || String(codigo).trim() === '' || String(descricao).trim() === '') return;
+
+                        // Ignora linhas que parecem ser cabeçalhos ou totais
+                        const normalizedDescricao = normalizeKey(String(descricao));
+                        if (normalizedDescricao.includes('HONORARIO') || normalizedDescricao.includes('VALOR') || String(codigo).length > 20) {
+                            return;
+                        }
+
+                        // Parse dos valores monetários
+                        const honorarioValue = columnMap.honorario !== undefined ? row[columnMap.honorario] : undefined;
+                        const exameCartaoValue = columnMap.exameCartao !== undefined ? row[columnMap.exameCartao] : undefined;
+
+                        const honorario = parseMoneyValue(honorarioValue);
+                        const exameCartao = parseMoneyValue(exameCartaoValue);
+
+                        // Se não tem valor de exame nem material, ignora
+                        if (honorario === 0 && exameCartao === 0 && material_max === 0) return;
+
+                        // Limpeza do nome: remove hífens e espaços iniciais
+                        let cleanedName = String(descricao).trim();
+                        cleanedName = cleanedName.replace(/^[\s-]+/, '').trim(); // Remove hífens e espaços no início
+
+                        const item: ValueTableItem = {
+                            id: `value-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                            codigo: String(codigo).trim(),
+                            nome: cleanedName,
+                            info: '',
+                            honorario,
+                            exame_cartao: exameCartao,
+                            material_min,
+                            material_max,
+                            honorarios_diferenciados: []
+                        };
+
+                        valuesByCategory[categoryId].push(item);
+                    });
+
+                    // Ordena alfabeticamente pelo nome do exame dentro da categoria
+                    valuesByCategory[categoryId].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                });
+
+                // Ordena as categorias por nome
+                importedCategories.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+                resolve({
+                    values: valuesByCategory,
+                    categories: importedCategories
+                });
+            } catch (error) {
+                reject(error);
+            }
+        };
+
+        reader.onerror = () => reject(reader.error);
+        reader.readAsBinaryString(file);
+    });
 }
