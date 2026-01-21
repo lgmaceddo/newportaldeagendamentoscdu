@@ -160,16 +160,16 @@ export function importExcelData(file: File): Promise<{
                         const forbiddenKeywords = [
                             'ITEM', 'DESCRICAO', 'CODIGO', 'PROCEDIMENTO', 'TOTAL',
                             'COD', 'NOME', 'EXAME', 'VALOR', 'PRECO', 'HONORARIO',
-                            'HM', 'PRODUTO', 'VALORTOTAL', 'HONORARIOMEDICO'
+                            'HM', 'PRODUTO', 'VALORTOTAL', 'HONORARIOMEDICO', 'SUBTOTAL'
                         ];
 
-                        // Se o código ou a descrição forem EXATAMENTE uma dessas palavras ou 
+                        // Se o código ou a descrição CONTIVEREM uma dessas palavras ou 
                         // se o código for inválido (muito longo), ignoramos a linha
-                        if (
-                            forbiddenKeywords.includes(normalizedCodigo) ||
-                            forbiddenKeywords.includes(normalizedDescricao) ||
-                            String(codigo).length > 20
-                        ) {
+                        const isForbidden = forbiddenKeywords.some(kw =>
+                            normalizedCodigo.includes(kw) || normalizedDescricao.includes(kw)
+                        );
+
+                        if (isForbidden || String(codigo).length > 20) {
                             return;
                         }
 
