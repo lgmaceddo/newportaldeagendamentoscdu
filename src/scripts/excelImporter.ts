@@ -153,9 +153,23 @@ export function importExcelData(file: File): Promise<{
                         // Validação básica
                         if (!codigo || !descricao || String(codigo).trim() === '' || String(descricao).trim() === '') return;
 
-                        // Ignora linhas que parecem ser cabeçalhos ou totais
+                        const normalizedCodigo = normalizeKey(String(codigo));
                         const normalizedDescricao = normalizeKey(String(descricao));
-                        if (normalizedDescricao.includes('HONORARIO') || normalizedDescricao.includes('VALOR') || String(codigo).length > 20) {
+
+                        // Lista de palavras proibidas que indicam cabeçalhos ou totais
+                        const forbiddenKeywords = [
+                            'ITEM', 'DESCRICAO', 'CODIGO', 'PROCEDIMENTO', 'TOTAL',
+                            'COD', 'NOME', 'EXAME', 'VALOR', 'PRECO', 'HONORARIO',
+                            'HM', 'PRODUTO', 'VALORTOTAL', 'HONORARIOMEDICO'
+                        ];
+
+                        // Se o código ou a descrição forem EXATAMENTE uma dessas palavras ou 
+                        // se o código for inválido (muito longo), ignoramos a linha
+                        if (
+                            forbiddenKeywords.includes(normalizedCodigo) ||
+                            forbiddenKeywords.includes(normalizedDescricao) ||
+                            String(codigo).length > 20
+                        ) {
                             return;
                         }
 
@@ -166,8 +180,8 @@ export function importExcelData(file: File): Promise<{
                         const honorario = parseMoneyValue(honorarioValue);
                         const exameCartao = parseMoneyValue(exameCartaoValue);
 
-                        // Se não tem valor de exame nem material, ignora
-                        if (honorario === 0 && exameCartao === 0 && material_max === 0) return;
+                        // Se não tem valor de honorário nem de exame, ignora (linhas de cabeçalho/total costumam vir zeradas)
+                        if (honorario === 0 && exameCartao === 0) return;
 
                         // Limpeza do nome: remove hífens e espaços iniciais
                         let cleanedName = String(descricao).trim();
