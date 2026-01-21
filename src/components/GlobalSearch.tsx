@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -15,7 +15,7 @@ interface SearchResult {
   type: string;
   section: string;
   navigationPath?: string;
-  navigationState?: unknown;
+  navigationState?: any;
   itemId?: string;
   categoryId?: string;
   viewType?: string;
@@ -47,9 +47,12 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
     };
   }, []);
 
+  // Perform search when searchTerm changes
+  useEffect(() => {
+    performSearch(searchTerm);
+  }, [searchTerm]);
 
-
-  const performSearch = useCallback((term: string) => {
+  const performSearch = (term: string) => {
     if (!term.trim()) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -103,7 +106,11 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
         const title = exam.title || "";
         const locationStr = Array.isArray(exam.location)
           ? exam.location.join(" ").toLowerCase()
-          : String(exam.location || "").toLowerCase();
+          : (exam.location || "").toLowerCase();
+        const setorStr = exam.setor && Array.isArray(exam.setor)
+          ? exam.setor.join(" ").toLowerCase()
+          : (exam.setor || "").toLowerCase();
+        const extension = exam.extension || "";
         const additionalInfo = exam.additionalInfo || "";
         const schedulingRules = exam.schedulingRules ? String(exam.schedulingRules) : "";
         const valueTableCode = exam.valueTableCode || "";
@@ -111,6 +118,8 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
         if (
           title.toLowerCase().includes(lowerTerm) ||
           locationStr.includes(lowerTerm) ||
+          setorStr.includes(lowerTerm) ||
+          extension.toLowerCase().includes(lowerTerm) ||
           additionalInfo.toLowerCase().includes(lowerTerm) ||
           schedulingRules.toLowerCase().includes(lowerTerm) ||
           valueTableCode.toLowerCase().includes(lowerTerm)
@@ -425,12 +434,7 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
 
     setSearchResults(foundResults.slice(0, 8)); // Limit to 8 results
     setShowSearchResults(foundResults.length > 0);
-  }, [scriptData, examData, contactData, valueTableData, professionalData, officeData, recadoData, infoData, estomaterapiaData]);
-
-  // Perform search when searchTerm changes
-  useEffect(() => {
-    performSearch(searchTerm);
-  }, [searchTerm, performSearch]);
+  };
 
   const handleResultClick = (result: SearchResult) => {
     setShowSearchResults(false);
@@ -489,7 +493,7 @@ export const GlobalSearch = ({ searchTerm, setSearchTerm }: GlobalSearchProps) =
               setSearchResults([]);
               setShowSearchResults(false);
               // Clear any search state in location
-              if ((window.location as any).state?.searchResult) {
+              if (window.location.state?.searchResult) {
                 window.history.replaceState({}, document.title, window.location.pathname);
               }
             }}
