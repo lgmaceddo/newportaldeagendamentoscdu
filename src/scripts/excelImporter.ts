@@ -18,17 +18,52 @@ function getCategoryColor(name: string): string {
     return colors[index];
 }
 
-function parseMoneyValue(value: string | undefined): number {
-    if (!value) return 0;
+function parseMoneyValue(value: any): number {
+    if (value === undefined || value === null || value === '') return 0;
 
-    // Ensure value is treated as string for replacement operations
-    const stringValue = String(value);
+    // Se já for número, retorna ele mesmo
+    if (typeof value === 'number') return value;
 
-    // Remove "R$", espaços, e pontos de milhar
-    const cleaned = stringValue.replace(/R\$\s*/g, '').replace(/\./g, '').replace(',', '.');
+    // Se for string, limpa e converte
+    const stringValue = String(value).trim();
+    if (!stringValue) return 0;
+
+    // Remove "R$", espaços, e trata pontos/vírgulas
+    // Lógica para PT-BR: "1.200,50" -> "1200.50"
+    const cleaned = stringValue
+        .replace(/R\$/g, '')
+        .replace(/\s/g, '')
+        .replace(/\./g, '')
+        .replace(',', '.');
+
     const parsed = parseFloat(cleaned);
-
     return isNaN(parsed) ? 0 : parsed;
+}
+
+function parsePriceRange(value: any): { min: number, max: number } {
+    if (value === undefined || value === null || value === '') return { min: 0, max: 0 };
+
+    // Se for número, min e max são iguais
+    if (typeof value === 'number') return { min: value, max: value };
+
+    const stringValue = String(value).trim();
+    if (!stringValue) return { min: 0, max: 0 };
+
+    // Tenta encontrar números na string (ex: "500 a 1500" ou "500 - 1500")
+    // Remove "R$" e espaços primeiro
+    const normalized = stringValue.replace(/R\$/g, '').replace(/\s/g, '');
+
+    // Procura por números com vírgula ou ponto decimal
+    const matches = normalized.match(/[\d.]+(,[\d]+)?/g);
+
+    if (matches && matches.length >= 2) {
+        const n1 = parseMoneyValue(matches[0]);
+        const n2 = parseMoneyValue(matches[1]);
+        return { min: Math.min(n1, n2), max: Math.max(n1, n2) };
+    }
+
+    const val = parseMoneyValue(stringValue);
+    return { min: val, max: val };
 }
 
 // Helper to normalize string (remove accents, convert to uppercase, remove non-alphanumeric)
@@ -40,11 +75,11 @@ function normalizeKey(str: string): string {
 
 // Mapeamento de chaves de busca para colunas essenciais
 const KEY_MAP: Record<string, string[]> = {
-    codigo: ['ITEM', 'CODIGO', 'COD', 'CDU', 'PROCEDIMENTO'],
-    descricao: ['DESCRICAO', 'NOME', 'EXAME', 'PROCEDIMENTO'],
-    honorario: ['HONORARIOMEDICO', 'HM', 'HONORARIO', 'PIX'],
-    exameCartao: ['VALOREXAME', 'PACOTECDU', 'VALORTOTAL', 'TOTAL', 'CARTAO'],
-    material: ['CONTRASTE', 'MATERIAIS', 'MATERIAL', 'MEDICAMENTOS', 'MATERIAISEMEDICAMENTOS'], // Coluna de material
+    codigo: ['ITEM', 'CODIGO', 'COD', 'CDU', 'PROCEDIMENTO', 'CODIGO DO EXAME'],
+    descricao: ['DESCRIÇÃO', 'DESCRICAO', 'NOME', 'EXAME', 'PROCEDIMENTO', 'NOME DO EXAME'],
+    honorario: ['HONORÁRIO MÉDICO', 'HONORARIOMEDICO', 'HM', 'HONORARIO', 'PIX', 'HONORARIO PIX'],
+    exameCartao: ['VALOR EXAME', 'VALOREXAME', 'PACOTECDU', 'VALORTOTAL', 'TOTAL', 'CARTAO', 'EXAME CARTAO', 'VALOR DO EXAME', 'VALOR TOTAL SEM CONTRASTE'],
+    material: ['CONTRASTE, MATERIAIS E MEDICAMENTOS', 'CONTRASTE', 'MATERIAIS', 'MATERIAL', 'MEDICAMENTOS', 'MATERIAISEMEDICAMENTOS'], // Coluna de material
 };
 
 /**
@@ -173,10 +208,10 @@ export function importExcelData(file: File): Promise<{
 
                         const honorario = parseMoneyValue(honorarioValue);
                         const exameCartao = parseMoneyValue(exameCartaoValue);
-                        const material = parseMoneyValue(materialValue);
+                        const materialRange = parsePriceRange(materialValue);
 
                         // Se não tem valor nenhum e não é material, ignora
-                        if (honorario === 0 && exameCartao === 0 && material === 0) return;
+                        if (honorario === 0 && exameCartao === 0 && materialRange.max === 0) return;
 
                         // Limpeza do nome: remove hífens e espaços iniciais
                         let cleanedName = String(descricao).trim();
@@ -189,8 +224,8 @@ export function importExcelData(file: File): Promise<{
                             info: '',
                             honorario,
                             exame_cartao: exameCartao,
-                            material_min: material, // Usa o valor da coluna se existir
-                            material_max: material,
+                            material_min: materialRange.min,
+                            material_max: materialRange.max,
                             honorarios_diferenciados: []
                         };
 

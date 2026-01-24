@@ -129,7 +129,14 @@ export function ImportExcelModal({ open, onOpenChange }: ImportExcelModalProps) 
                 <ul className="list-disc list-inside space-y-1 text-red-700 dark:text-red-300">
                   <li>Ao importar, **TODAS** as categorias e dados de valores existentes serão **APAGADOS** e substituídos pelos dados do arquivo Excel.</li>
                   <li>Cada aba (sheet) do Excel será convertida em uma nova categoria no sistema.</li>
-                  <li>O arquivo deve conter colunas para ITEM (Código), DESCRIÇÃO, HONORÁRIO MÉDICO e VALOR EXAME.</li>
+                  <li>Mapeamento automático:
+                    <ul className="list-none pl-4 mt-1 text-xs opacity-80">
+                      <li>• DESCRIÇÃO → Nome do Exame</li>
+                      <li>• HONORÁRIO MÉDICO → Honorário (PIX)</li>
+                      <li>• VALOR EXAME → Exame (Cartão)</li>
+                      <li>• CONTRASTE, MATERIAIS... → Material</li>
+                    </ul>
+                  </li>
                 </ul>
               </div>
             </div>
