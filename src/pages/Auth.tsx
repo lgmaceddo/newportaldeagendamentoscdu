@@ -176,7 +176,7 @@ const Auth: React.FC = () => {
           {/* Logo Section */}
           <div className="mb-10 flex justify-center md:justify-start">
             <img
-              src="/src/assets/unimed-bauru-logo.png"
+              src="/src/assets/logo-login.png"
               alt="Unimed Logo"
               className="h-16 md:h-20 w-auto object-contain drop-shadow-sm transition-all hover:scale-105"
             />
