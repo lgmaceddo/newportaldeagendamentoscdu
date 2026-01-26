@@ -17,16 +17,16 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
   const handleCopyContact = (contact: ContactPoint) => {
     let textLines: string[] = [];
     textLines.push(`📍 ${contact.setor}`);
-    // if (contact.local) textLines.push(`🏢 Local: ${contact.local}`); // Removed
+    if (contact.local) textLines.push(`🏢 Local: ${contact.local}`);
     if (contact.ramal) textLines.push(`☎️ Ramal: ${contact.ramal}`);
-    if (contact.telefone) textLines.push(`📞 Telefone: ${contact.telefone}`);
-    if (contact.whatsapp) textLines.push(`💬 WhatsApp: ${contact.whatsapp}`);
+    if (contact.telefone) textLines.push(`📞 Telefone: ${formatPhoneNumber(contact.telefone)}`);
+    if (contact.whatsapp) textLines.push(`💬 WhatsApp: ${formatPhoneNumber(contact.whatsapp)}`);
 
     navigator.clipboard.writeText(textLines.join('\n'));
     toast({
       title: "Copiado!",
       description: `Informações de ${contact.setor} copiadas.`,
-      variant: "compact",
+      variant: "compact", // Keep compact variant if valid, else standard
       duration: 1000,
     });
   };
@@ -36,92 +36,104 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
     action();
   };
 
+  const formatPhoneNumber = (phone: string) => {
+    // Simple formatter or return as is
+    return phone;
+  };
+
   return (
-    <div className="border rounded-lg bg-card shadow-sm p-3 hover:shadow-md transition-shadow duration-200 group">
-      {/* Layout Grid para Desktop */}
-      {/* Nome (320px ~35chars) | Ramal (Auto - mostra tudo) | Telefone (160px) | Espaço Vazio (Flex) | Ações */}
-      <div className="grid grid-cols-1 md:grid-cols-[320px_auto_160px_1fr_auto] gap-2 items-center">
+    <div className="group relative border border-border/60 rounded-xl bg-card hover:bg-muted/30 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center p-3 gap-3">
 
-        {/* 1. Nome do Ponto (Setor) */}
-        <div className="font-semibold text-sm text-foreground truncate" title={point.setor}>
-          {point.setor}
-        </div>
+        {/* Left: Icon & Main Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <h4 className="font-semibold text-base text-foreground truncate pr-2 flex items-center gap-2">
+              {point.setor}
+              {point.description && (
+                <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse mt-0.5" title="Possui observação"></span>
+              )}
+            </h4>
+          </div>
 
-        {/* 2. Ramal (Mostra tudo) */}
-        <div className="text-xs truncate flex items-center gap-1.5" title={point.ramal ? `Ramal: ${point.ramal}` : ''}>
-          {point.ramal ? (
-            <>
-              <Phone className="h-3 w-3 text-primary flex-shrink-0" />
-              <span className="font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                R: {point.ramal}
-              </span>
-            </>
-          ) : (
-            <span className="opacity-0">-</span>
-          )}
-        </div>
+          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-1.5 text-sm">
+            {point.local && (
+              <div className="flex items-center text-muted-foreground" title="Localização">
+                <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground/70" />
+                <span className="truncate max-w-[150px]">{point.local}</span>
+              </div>
+            )}
 
-        {/* 3. Telefone / WhatsApp */}
-        <div className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
-          {point.whatsapp ? (
-            <div className="flex items-center gap-1 text-green-600 font-medium" title="WhatsApp">
-              <Smartphone className="h-3 w-3" />
-              <span>{point.whatsapp}</span>
+            {/* Contact Numbers Row */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {point.ramal && (
+                <div className="flex items-center bg-primary/10 text-primary px-2 py-0.5 rounded-md text-xs font-bold border border-primary/10">
+                  <span className="mr-1 opacity-70">Ramal</span>
+                  {point.ramal}
+                </div>
+              )}
+
+              {point.telefone && (
+                <div className="flex items-center text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5 mr-1.5 opacity-70" />
+                  <span className="font-medium text-foreground/80">{point.telefone}</span>
+                </div>
+              )}
+
+              {point.whatsapp && (
+                <div className="flex items-center text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-xs font-medium border border-green-100 dark:bg-green-900/20 dark:border-green-900/30">
+                  <Smartphone className="h-3 w-3 mr-1" />
+                  {point.whatsapp}
+                </div>
+              )}
             </div>
-          ) : point.telefone ? (
-            <div className="flex items-center gap-1" title="Telefone">
-              <Phone className="h-3 w-3" />
-              <span>{point.telefone}</span>
-            </div>
-          ) : (
-            <span className="opacity-0">-</span>
-          )}
+          </div>
         </div>
 
-        {/* 4. Espaçador (preenche vazio para empurrar ações para a direita) */}
-        <div className="hidden md:block"></div>
+        {/* Right: Actions */}
+        <div className="flex items-center justify-end gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity self-end sm:self-center">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={(e) => handleActionClick(e, () => handleCopyContact(point))}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-background shadow-none"
+            title="Copiar informações"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
 
-        {/* 5. Ações */}
-        <div className="flex items-center justify-end gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
           {canEdit && (
             <>
+              <div className="w-px h-4 bg-border mx-1 hidden sm:block"></div>
               <Button
                 size="icon"
                 variant="ghost"
                 onClick={(e) => handleActionClick(e, () => onEdit(point))}
-                className="h-7 w-7 text-muted-foreground hover:text-primary"
+                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 shadow-none"
                 title="Editar"
               >
-                <Edit className="h-3.5 w-3.5" />
+                <Edit className="h-4 w-4" />
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
                 onClick={(e) => handleActionClick(e, () => onDelete(point.id))}
-                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shadow-none"
                 title="Excluir"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className="h-4 w-4" />
               </Button>
             </>
           )}
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={(e) => handleActionClick(e, () => handleCopyContact(point))}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title="Copiar"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
         </div>
       </div>
 
-      {/* Descrição em linha separada e largura total - Respeitando quebras de linha */}
+      {/* Description Footnote */}
       {point.description && (
-        <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground pl-1">
-          <span className="text-primary/50 text-[10px] uppercase font-bold tracking-wider mr-2 select-none">Nota:</span>
-          <div className="whitespace-pre-wrap mt-1 italic">{point.description}</div>
+        <div className="px-3 pb-3 pt-0">
+          <div className="bg-muted/40 rounded-md p-2 text-xs text-muted-foreground border border-border/40 mt-1">
+            <p className="line-clamp-2">{point.description}</p>
+          </div>
         </div>
       )}
     </div>

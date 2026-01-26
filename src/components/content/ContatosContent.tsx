@@ -287,10 +287,20 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
         </div>
       </div>
 
-      {searchTerm && searchResults && (<div className="bg-primary/5 p-4 font-bold text-primary border rounded-lg"> Resultados da Busca: {Object.values(searchResults).flat().length} itens encontrados </div>)}
+      {searchTerm && searchResults && (
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-primary font-medium">
+            <Search className="h-5 w-5" />
+            <span>Resultados da Busca: <span className="font-bold">{Object.values(searchResults).flat().length}</span> itens encontrados</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(""); setOpenGroups(new Set()); }} className="h-8 text-muted-foreground hover:text-foreground">
+            Limpar Busca
+          </Button>
+        </div>
+      )}
 
-      <Card className="overflow-hidden">
-        <CardContent className="p-0 divide-y divide-border/50">
+      <Card className="overflow-hidden border-none shadow-none bg-transparent space-y-4">
+        <CardContent className="p-0 space-y-4">
           {searchTerm && searchResults ? (
             Object.entries(searchResults).map(([categoryId, results]) => {
               if (results.length === 0) return null;
@@ -298,43 +308,42 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
               const groupsInCategory = data[categoryId] || [];
               const groupIdsWithResults = new Set(results.map(r => r.groupId));
               const filteredGroupsInCategory = groupsInCategory.filter(group => groupIdsWithResults.has(group.id));
+
               if (filteredGroupsInCategory.length === 0) return null;
+
               return (
-                <div key={categoryId}>
-                  {category && (<div className="bg-muted p-2 font-medium border-b"> Categoria: {category.name} </div>)}
+                <div key={categoryId} className="space-y-4">
+                  {category && (
+                    <div className="flex items-center gap-2 pb-2 border-b border-border/50">
+                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+                        {category.name}
+                      </span>
+                    </div>
+                  )}
                   {filteredGroupsInCategory.map(group => {
                     const groupResults = results.filter(r => r.groupId === group.id);
                     const isGroupMatch = groupResults.some(r => r.type === 'group');
-
-                    // Se o GRUPO deu match, mostra TODOS os pontos.
-                    // Se apenas PONTOS deram match, mostra apenas eles.
                     const matchingPoints = isGroupMatch
                       ? group.points
                       : group.points.filter(point => groupResults.some(r => r.type === 'point' && (r.item as ContactPoint).id === point.id));
+
                     return (
-                      <Collapsible key={group.id} open={openGroups.has(group.id)} onOpenChange={() => toggleGroup(group.id)} className="border-b last:border-b-0">
+                      <Collapsible key={group.id} open={true} className="border rounded-xl bg-card shadow-sm overflow-hidden">
                         <CollapsibleTrigger asChild>
-                          <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center justify-between p-4 bg-muted/30">
                             <div className="flex items-center gap-3">
-                              <Users className="h-5 w-5 text-primary" />
-                              <h3 className="font-bold text-lg text-foreground"> {group.name} </h3>
-                              <span className="text-sm text-muted-foreground"> ({matchingPoints.length} pontos) </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {canEditContatos && (
-                                <>
-                                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleAddPoint(group.id); }} className="h-8 text-xs"> <Plus className="h-4 w-4 mr-1" /> Ponto </Button>
-                                  <Button size="icon" variant="ghost" onClick={(e) => handleActionClick(e, () => handleEditGroup(group))} className="h-8 w-8 text-muted-foreground hover:text-primary" title="Editar Grupo"> <Edit className="h-4 w-4" /> </Button>
-                                  <Button size="icon" variant="ghost" onClick={(e) => handleActionClick(e, () => handleDeleteGroup(group.id))} className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Excluir Grupo"> <Trash2 className="h-4 w-4" /> </Button>
-                                </>
-                              )}
-                              <ChevronDown className={cn("h-5 w-5 transition-transform", openGroups.has(group.id) && "rotate-180")} />
+                              <div className="bg-white p-2 rounded-lg shadow-sm border border-border/50">
+                                <Users className="h-5 w-5 text-primary" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-lg text-foreground leading-tight"> {group.name} </h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">Encontrados: {matchingPoints.length} pontos</p>
+                              </div>
                             </div>
                           </div>
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="p-4 bg-muted/20">
+                        <CollapsibleContent className="p-4 bg-card/50">
                           {renderPointsList(matchingPoints, group.id)}
-                          {matchingPoints.length === 0 && (<div className="text-center py-4 text-muted-foreground border border-dashed rounded-lg"> Nenhum ponto de contato encontrado na busca. </div>)}
                         </CollapsibleContent>
                       </Collapsible>
                     );
@@ -344,41 +353,98 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
             })
           ) : filteredGroups.length > 0 ? (
             filteredGroups.map((group) => (
-              <Collapsible key={group.id} open={openGroups.has(group.id)} onOpenChange={() => toggleGroup(group.id)} className="border-b last:border-b-0">
+              <Collapsible
+                key={group.id}
+                open={openGroups.has(group.id)}
+                onOpenChange={() => toggleGroup(group.id)}
+                className={cn(
+                  "border rounded-xl bg-card transition-all duration-300",
+                  openGroups.has(group.id) ? "shadow-md ring-1 ring-primary/20" : "shadow-sm hover:shadow-md hover:border-primary/30"
+                )}
+              >
                 <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <Users className="h-5 w-5 text-primary" />
-                      <h3 className="font-bold text-lg text-foreground"> {group.name} </h3>
-                      <span className="text-sm text-muted-foreground"> ({group.points.length} pontos) </span>
+                  <div className="flex items-center justify-between p-4 cursor-pointer group select-none">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "p-2.5 rounded-xl transition-colors duration-300",
+                        openGroups.has(group.id) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                      )}>
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <h3 className={cn("font-bold text-lg transition-colors", openGroups.has(group.id) ? "text-primary" : "text-foreground group-hover:text-primary/80")}>
+                          {group.name}
+                        </h3>
+                        <span className="text-sm text-muted-foreground font-medium flex items-center gap-1">
+                          {group.points.length} {group.points.length === 1 ? 'ponto' : 'pontos'}
+                        </span>
+                      </div>
                     </div>
+
                     <div className="flex items-center gap-2">
                       {canEditContatos && (
-                        <>
-                          <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleAddPoint(group.id); }} className="h-8 text-xs"> <Plus className="h-4 w-4 mr-1" /> Ponto </Button>
-                          <Button size="icon" variant="ghost" onClick={(e) => handleActionClick(e, () => handleEditGroup(group))} className="h-8 w-8 text-muted-foreground hover:text-primary" title="Editar Grupo"> <Edit className="h-4 w-4" /> </Button>
+                        <div className="flex items-center gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleAddPoint(group.id); }} className="h-8 w-8 p-0 text-muted-foreground hover:text-primary" title="Adicionar Ponto"> <Plus className="h-4 w-4" /> </Button>
+                          <Button size="icon" variant="ghost" onClick={(e) => handleActionClick(e, () => handleEditGroup(group))} className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Editar Grupo"> <Edit className="h-4 w-4" /> </Button>
                           <Button size="icon" variant="ghost" onClick={(e) => handleActionClick(e, () => handleDeleteGroup(group.id))} className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Excluir Grupo"> <Trash2 className="h-4 w-4" /> </Button>
-                        </>
+                        </div>
                       )}
-                      <ChevronDown className={cn("h-5 w-5 transition-transform", openGroups.has(group.id) && "rotate-180")} />
+                      <div className={cn(
+                        "h-8 w-8 rounded-full flex items-center justify-center transition-transform duration-300 bg-muted/50",
+                        openGroups.has(group.id) && "bg-primary/10 rotate-180"
+                      )}>
+                        <ChevronDown className={cn("h-5 w-5 text-muted-foreground", openGroups.has(group.id) && "text-primary")} />
+                      </div>
                     </div>
                   </div>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="p-4 bg-muted/20">
-                  {renderPointsList(group.points, group.id)}
-                  {group.points.length === 0 && (
-                    <div className="text-center py-4 text-muted-foreground border border-dashed rounded-lg">
-                      Nenhum ponto de contato cadastrado neste grupo.
-                      {canEditContatos && (<Button variant="link" size="sm" onClick={() => handleAddPoint(group.id)} className="ml-2"> Adicionar Ponto </Button>)}
-                    </div>
-                  )}
+
+                <CollapsibleContent className="border-t border-border/50">
+                  <div className="p-4 bg-muted/5 space-y-4">
+                    {renderPointsList(group.points, group.id)}
+                    {group.points.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground border-2 border-dashed border-muted rounded-xl bg-muted/20">
+                        <Users className="h-10 w-10 mb-3 opacity-20" />
+                        <p className="font-medium">Nenhum contato cadastrado</p>
+                        <p className="text-sm opacity-70 mb-4">Este grupo está vazio.</p>
+                        {canEditContatos && (
+                          <Button variant="outline" size="sm" onClick={() => handleAddPoint(group.id)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar Primeiro Ponto
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             ))
           ) : (
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <p> {searchTerm ? "Nenhum grupo ou ponto de contato encontrado." : sortedCategories.length === 0 ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'." : "Nenhum grupo de contato cadastrado nesta categoria. Clique em 'Novo Grupo' para começar."} </p>
-            </CardContent>
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <div className="bg-muted p-6 rounded-full mb-4">
+                <Search className="h-12 w-12 opacity-20" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Nenhum resultado encontrado</h3>
+              <p className="max-w-md text-center opacity-80 mb-6">
+                {searchTerm
+                  ? `Não encontramos nada para "${searchTerm}". Tente outro termo.`
+                  : sortedCategories.length === 0
+                    ? "Comece criando categorias para organizar seus contatos."
+                    : "Selecione uma categoria ou crie um novo grupo para começar."}
+              </p>
+              {sortedCategories.length === 0 && canEditContatos && (
+                <Button onClick={() => setCategoryModalOpen(true)}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configurar Categorias
+                </Button>
+              )}
+              {!searchTerm && sortedCategories.length > 0 && canEditContatos && (
+                <Button onClick={() => { setEditingGroup(undefined); setGroupModalOpen(true); }} className="bg-primary hover:bg-primary/90">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Primeiro Grupo
+                </Button>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
