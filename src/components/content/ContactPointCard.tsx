@@ -48,19 +48,19 @@ export const ContactPointCard = ({ point, onEdit, onDelete, canEdit }: ContactPo
         {/* Left: Icon & Main Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
-            <h4 className="font-semibold text-base text-foreground truncate pr-2 flex items-center gap-2">
+            <h4 className="font-semibold text-base text-foreground pr-2 flex items-center gap-2 flex-wrap">
               {point.setor}
               {point.description && (
-                <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse mt-0.5" title="Possui observação"></span>
+                <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse mt-0.5 shrink-0" title="Possui observação"></span>
               )}
             </h4>
           </div>
 
-          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 mt-1.5 text-sm">
+          <div className="flex flex-col gap-2 mt-2 text-sm">
             {point.local && (
-              <div className="flex items-center text-muted-foreground" title="Localização">
-                <MapPin className="h-3.5 w-3.5 mr-1 text-muted-foreground/70" />
-                <span className="truncate max-w-[150px]">{point.local}</span>
+              <div className="flex items-start text-muted-foreground" title="Localização">
+                <MapPin className="h-3.5 w-3.5 mr-1.5 mt-0.5 text-muted-foreground/70 shrink-0" />
+                <span className="break-words leading-snug">{point.local}</span>
               </div>
             )}
 
