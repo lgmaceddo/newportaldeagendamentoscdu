@@ -363,7 +363,7 @@ export const ContatosContent = ({ viewType, categories, data }: ContatosContentP
                 )}
               >
                 <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between p-4 cursor-pointer group select-none">
+                  <div className="flex items-center justify-between p-4 cursor-pointer group">
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         "p-2.5 rounded-xl transition-colors duration-300",
