@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, User, ArrowLeft, Eye, EyeOff, Check, ShieldCheck, Plus } from 'lucide-react';
+import logoLogin from '@/assets/logo-login.png';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
@@ -176,7 +177,7 @@ const Auth: React.FC = () => {
           {/* Logo Section */}
           <div className="mb-10 flex justify-center md:justify-start">
             <img
-              src="/src/assets/logo-login.png"
+              src={logoLogin}
               alt="Unimed Logo"
               className="h-16 md:h-20 w-auto object-contain drop-shadow-sm transition-all hover:scale-105"
             />
