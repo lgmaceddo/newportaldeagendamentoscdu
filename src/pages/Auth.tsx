@@ -173,11 +173,13 @@ const Auth: React.FC = () => {
         {/* Lado Esquerdo - Formulário */}
         <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col relative">
 
-          {/* Logo Box */}
-          <div className="mb-8">
-            <div className="h-12 w-12 bg-[#10605B] rounded-lg flex items-center justify-center shadow-lg">
-              <Plus className="h-6 w-6 text-white" strokeWidth={3} />
-            </div>
+          {/* Logo Section */}
+          <div className="mb-10 flex justify-center md:justify-start">
+            <img
+              src="/src/assets/unimed-bauru-logo.png"
+              alt="Unimed Logo"
+              className="h-16 md:h-20 w-auto object-contain drop-shadow-sm transition-all hover:scale-105"
+            />
           </div>
 
           <div className="flex-1 flex flex-col justify-center">
@@ -374,11 +376,7 @@ const Auth: React.FC = () => {
             )}
           </div>
 
-          <div className="mt-auto pt-6 text-center md:text-left">
-            <button className="text-[10px] font-bold text-gray-400 hover:text-[#10605B] tracking-widest uppercase transition-colors">
-              Acesso Rápido - Recepção
-            </button>
-          </div>
+
         </div>
 
         {/* Lado Direito - Branding */}
@@ -390,7 +388,7 @@ const Auth: React.FC = () => {
           {/* Top Badge */}
           <div className="self-end">
             <span className="px-4 py-1.5 border border-white/30 rounded-full text-[10px] font-semibold text-white tracking-widest uppercase">
-              Unimed Bauru
+              CENTRO DE DIAGNÓSTICO UNIMED
             </span>
           </div>
 
