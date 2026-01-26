@@ -189,29 +189,30 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   };
 
   const generatePolipectomyInfo = () => {
-    return `⚠️ Importante: Caso seja identificada a necessidade de remoção de pólipos durante o exame, o procedimento será convertido para Polipectomia.
+    return `✅ Polipectomia (Esôfago, Estômago e Duodeno)
 
-✅ POLIPECTOMIA (ESÔFAGO, ESTÔMAGO E DUODENO)
+💰 Valor do Procedimento: R$ 1.795,00
 
-O valor total do procedimento é de R$ 1.795,00.
+• Este valor contempla a realização do exame com sedação.
 
-Este valor inclui a realização com sedação;
+⚠️ Caso haja necessidade de anestesia (diferente da sedação padrão), os valores devem ser consultados diretamente com a UNIANEST: 
 
-Em caso de necessidade de anestesia, o valor deve ser consultado diretamente com a UNIANEST: 📞 (14) 3206-3101 | (14) 3206-9435.
+📞 Contatos: (14) 3206-3101 | (14) 3206-9435.
 
-📦 Materiais e Biópsia (Custos Adicionais):
+📦 Custos Adicionais (Materiais e Biópsias): Dependendo do que for identificado durante o procedimento, poderão ocorrer os seguintes acréscimos:
 
-Envio para biópsia: Acréscimo de R$ 400,00 a R$ 1.100,00 (dependendo da quantidade de amostras);
+• Envio para Biópsia: De R$ 400,00 a R$ 1.100,00 (varia conforme a quantidade de amostras).
 
-Taxa por pólipo: Acréscimo de R$ 400,00 a R$ 1.100,00 por formação retirada.
+• Taxa por Pólipo: De R$ 400,00 a R$ 1.100,00 por cada formação retirada.
 
 Para dúvidas sobre valores e condições de pagamento, entre em contato com nosso setor Financeiro:
 
-💬 WhatsApp Financeiro: (14) 99865-9327 🕒 Horário de Atendimento:
-* Segunda a Sexta: 07h às 19h
-* Sábado: 08h às 13h
+💬 WhatsApp Financeiro: (14) 99865-9327
 
-Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui para ajudar! 😊`;
+🕒 Atendimento: Segunda a sexta (07h às 19h e
+Sábados (08h às 13h).
+
+Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui para ajudar!`;
   };
 
   const generateScript = () => {
