@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Category, ValueTableItem } from "@/types/data";
 import { ValueModal } from "@/components/modals/ValueModal";
 import { ScriptGeneratorModal } from "@/components/modals/ScriptGeneratorModal";
-import { ImportExcelModal } from "@/components/modals/ImportExcelModal";
 import { useData } from "@/contexts/DataContext";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoleContext } from "@/contexts/UserRoleContext";
@@ -47,7 +46,6 @@ export const ValoresContent = ({ categories, data }: ValoresContentProps) => {
   const [editingValue, setEditingValue] = useState<(ValueTableItem & { oldCategoryId: string }) | undefined>();
   const [viewingValue, setViewingValue] = useState<ValueTableItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const { deleteValueTable, hasUnsavedChanges, saveToLocalStorage, syncValueTableToExams, reorderValueCategories, bulkUpsertValueTable } = useData();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -365,14 +363,6 @@ Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui
               {canEditValores && (
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
-                    className="border-primary text-primary hover:bg-primary/10"
-                    onClick={() => setIsImportModalOpen(true)}
-                    disabled={categories.length === 0}
-                  >
-                    <FileSpreadsheet className="h-5 w-5 mr-2" /> Sincronizar Excel
-                  </Button>
-                  <Button
                     className="bg-primary hover:bg-primary/90"
                     onClick={() => setIsValueModalOpen(true)}
                     disabled={categories.length === 0}
@@ -642,10 +632,7 @@ Se precisar de mais informações, fique à vontade para perguntar! Estamos aqui
         onClose={() => setIsScriptModalOpen(false)}
         script={generatedScript}
       />
-      <ImportExcelModal
-        open={isImportModalOpen}
-        onOpenChange={setIsImportModalOpen}
-      />
+
     </div>
   );
 };

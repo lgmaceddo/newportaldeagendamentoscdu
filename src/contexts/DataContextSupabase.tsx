@@ -805,6 +805,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const exportAllData = () => {
     // Can build a JSON string from current state for backup
     const state = {
+      userName, headerTagData, // Included basic settings
       scriptCategories, scriptData, examCategories, examData,
       contactCategories, contactData, valueTableCategories, valueTableData,
       professionalData, officeData, noticeData,
@@ -1310,7 +1311,62 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       loadAllDataFromSupabase();
     }
   };
-  const moveAndUpdateValueTable = () => { };
+  const moveAndUpdateValueTable = async (viewType: string, oldCategoryId: string, newCategoryId: string, itemId: string, updates: Partial<ValueTableItem>) => {
+    // 1. Optimistic Update
+    setValueTableData(prev => {
+      const currentViewData = prev[viewType] || {};
+      const oldCategoryItems = currentViewData[oldCategoryId] || [];
+      const itemToUpdate = oldCategoryItems.find(item => item.id === itemId);
+
+      if (!itemToUpdate) return prev;
+
+      const updatedItem: ValueTableItem = { ...itemToUpdate, ...updates };
+
+      if (oldCategoryId === newCategoryId) {
+        return {
+          ...prev,
+          [viewType]: {
+            ...currentViewData,
+            [oldCategoryId]: oldCategoryItems.map(item =>
+              item.id === itemId ? updatedItem : item
+            )
+          }
+        };
+      } else {
+        const newCategoryItems = currentViewData[newCategoryId] || [];
+        return {
+          ...prev,
+          [viewType]: {
+            ...currentViewData,
+            [oldCategoryId]: oldCategoryItems.filter(item => item.id !== itemId),
+            [newCategoryId]: [...newCategoryItems, updatedItem]
+          }
+        };
+      }
+    });
+
+    // 2. Supabase Update
+    try {
+      const dbUpdates: any = {
+        category_id: newCategoryId, // Ensure category is updated (supports moving)
+        codigo: updates.codigo,
+        nome: updates.nome,
+        info: updates.info,
+        honorario: updates.honorario,
+        exame_cartao: updates.exame_cartao,
+        material_min: updates.material_min,
+        material_max: updates.material_max,
+        honorarios_diferenciados: JSON.stringify(updates.honorarios_diferenciados || [])
+      };
+
+      const { error } = await supabase.from('value_table_items').update(dbUpdates).eq('id', itemId);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Erro ao atualizar item de valores:", error);
+      toast.error("Erro ao sincronizar atualização.");
+      loadAllDataFromSupabase();
+    }
+  };
   const deleteValueTable = async (viewType: string, categoryId: string, itemId: string) => {
     setValueTableData(prev => {
       const list = prev[viewType]?.[categoryId] || [];
