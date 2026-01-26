@@ -1,0 +1,282 @@
+{
+  "meta": {
+    "project": "Portal de Agendamento CDU",
+    "date": "2026-01-21",
+    "prepared_by": "Equipe de Desenvolvimento Unimed Bauru"
+  },
+  "product_overview": "O Portal de Agendamento CDU é um sistema web interno que centraliza e otimiza a gestão de agendamentos, informações operacionais, comunicação e controle de acesso da equipe do Centro de Diagnóstico Unimed. Ele elimina a dispersão de dados em planilhas e documentos, facilitando o acesso rápido e padronizado a scripts, exames, contatos, profissionais, consultórios, valores e anotações, com busca global e sistema de permissões robusto.",
+  "core_goals": [
+    "Centralizar as informações operacionais e de agendamento do Centro de Diagnóstico Unimed numa única plataforma web segura e acessível.",
+    "Padronizar e agilizar os atendimentos por meio de scripts e processos unificados.",
+    "Facilitar a comunicação interna entre setores via sistema de recados e notificações futuras.",
+    "Garantir controle de acesso seguro baseado em papéis e segmentação por setores, protegendo dados sensíveis.",
+    "Permitir importação e exportação de dados para facilitar migração e backup.",
+    "Proporcionar uma interface intuitiva, responsiva e eficiente para diferentes perfis de usuários.",
+    "Oferecer busca global unificada para agilizar localização de informações.",
+    "Assegurar alta performance, segurança e usabilidade, com integração completa com Supabase e suporte a módulos complexos como tabelas de valores e anotações.",
+    "Preparar a plataforma para evolução futura conforme roadmap, incluindo integrações, relatórios avançados e funcionalidades inteligentes."
+  ],
+  "key_features": [
+    "Dashboard personalizado com métricas diárias, alocações, tarefas pendentes e recados filtrados por setor e perfil de usuário.",
+    "Sistema completo de scripts de atendimento com categorias, ordenação via drag & drop e cópia rápida para agilizar o atendimento telefônico.",
+    "Gestão detalhada de exames com múltiplos locais, regras de agendamento, preparação, anestesia e vinculação automática com tabela de valores.",
+    "Organização de contatos corporativos em grupos e pontos de contato, com funcionalidade click-to-call e click-to-WhatsApp.",
+    "Tabela de valores médica abrangente, incluindo honorários diferenciados por profissional e gênero, com importação via Excel e cálculos automáticos.",
+    "Cadastro e gerenciamento de profissionais de saúde com especialidades, encaixes, exames realizados e histórico.",
+    "Administração de consultórios com informações categorizadas, horários, atendentes e profissionais relacionados.",
+    "Sistema avançado de anotações e estomaterapia com tags customizadas, visualização de anexos e privacidade configurável.",
+    "Sistema interno de recados para comunicação entre usuários e grupos, com filtro por setor e histórico completo.",
+    "Gerenciamento de usuários e permissões restrito a administradores, com atribuição de setores e roles.",
+    "Busca global em tempo real com atalhos de teclado, resultados agrupados por tipo e respeitando permissões de acesso.",
+    "Sistema de migração de dados via JSON com validação, opções de substituição e sincronização com Supabase.",
+    "Autenticação robusta via Supabase Auth com login, cadastro, recuperação e atualização de senha suportados.",
+    "Tema dark/light com detecção de preferência do sistema e persistência da escolha do usuário.",
+    "Layout responsivo com sidebar, header, modais e componentes acessíveis e adaptáveis a dispositivos móveis."
+  ],
+  "user_flow_summary": [
+    "Usuário realiza login via email e senha, com controle de acesso baseado em papéis (admin/user).",
+    "Usuário acessa dashboard, visualizando métricas e informações relevantes filtradas pelo setor ativo.",
+    "Usuário navega por módulos (scripts, exames, contatos, profissionais, consultórios, anotações, recados) para consulta ou edição conforme permissões.",
+    "Atendentes utilizam scripts para atendimento telefônico, podendo copiar com um clique.",
+    "Coordenadores criam e editam categorias, scripts, exames, contatos, valores, profissionais e consultórios conforme perfil.",
+    "Administradores gerenciam usuários, permissões, migração de dados e configurações avançadas.",
+    "Usuário utiliza busca global instantânea por meio do campo no header ou atalho Ctrl/Cmd + K.",
+    "Usuário edita anotações pessoais e visualiza anotações públicas, com upload e visualização de anexos.",
+    "Coordenadores importam tabelas de valores via Excel e atualizam dados em lote.",
+    "Sistema atualiza dados em tempo real via Supabase Realtime e exibe notificações futuras de recados e tarefas."
+  ],
+  "validation_criteria": [
+    "Todas as funcionalidades principais implementadas conforme requisitos detalhados do PRD.",
+    "Autenticação e controle de acesso testados com diferentes perfis de usuário (admin e user).",
+    "Validação de formulários rigorosa usando Zod, com mensagens de erro claras e inline.",
+    "Testes de usabilidade realizados para garantir interface intuitiva e responsiva em múltiplos dispositivos.",
+    "Performance do sistema atende aos limites definidos (ex. carga inicial <3s, busca <500ms, sincronização <1s).",
+    "Busca global retorna resultados relevantes respeitando permissões e limites por categoria.",
+    "Importação de Excel valida e atualiza dados corretamente, com feedback ao usuário em casos de erro.",
+    "Sistema de migração de dados valida estrutura do JSON e executa substituição segura quando autorizado.",
+    "Dados sensíveis protegidos com Row Level Security (RLS) e políticas de acesso pelo Supabase.",
+    "Feedback visual e notificações implementados para todas ações críticas, inclusive erros e confirmacões.",
+    "Testes manuais e planos automatizados (unitários, integração e e2e) cobrem os principais fluxos do produto.",
+    "Documentação técnica e de usuário disponível e atualizada conforme funcionalidades implementadas."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "React 18",
+      "Vite",
+      "Supabase",
+      "Tailwind CSS",
+      "Shadcn UI",
+      "React Router DOM",
+      "React Query",
+      "Zod",
+      "React Hook Form",
+      "Radix UI",
+      "Lucide React",
+      "XLSX"
+    ],
+    "features": [
+      {
+        "name": "Authentication System",
+        "description": "Complete authentication flow with Supabase Auth including login, signup, password reset, and password update. Supports email/password authentication with role-based access control (admin/user).",
+        "files": [
+          "src/contexts/AuthContext.tsx",
+          "src/pages/Auth.tsx",
+          "src/contexts/UserRoleContext.tsx"
+        ]
+      },
+      {
+        "name": "Dashboard",
+        "description": "Main dashboard displaying key metrics, allocation statistics, tasks, and notes. Shows doctor allocation by period (morning/afternoon), exam counts, and role-specific information.",
+        "files": [
+          "src/components/content/DashboardContent.tsx",
+          "src/pages/Index.tsx"
+        ]
+      },
+      {
+        "name": "Scripts Management",
+        "description": "System for managing reusable scripts organized by categories. Supports CRUD operations, drag-and-drop ordering, copy to clipboard functionality, and custom ordering.",
+        "files": [
+          "src/components/content/ScriptsContent.tsx",
+          "src/components/modals/ScriptModal.tsx",
+          "src/components/modals/CategoryModal.tsx"
+        ]
+      },
+      {
+        "name": "Exams Management",
+        "description": "Comprehensive exam management system with categorization, search, filtering, and detailed information including exam codes, preparation instructions, and related data.",
+        "files": [
+          "src/components/content/ExamesContent.tsx",
+          "src/components/modals/ExamModal.tsx",
+          "src/components/modals/ExamDetailsModal.tsx",
+          "src/hooks/use-exam-map.tsx"
+        ]
+      },
+      {
+        "name": "Contacts Management",
+        "description": "Contact management system organized by clusters and contact points. Supports hierarchical organization, phone numbers, emails, and notes.",
+        "files": [
+          "src/components/content/ContatosContent.tsx",
+          "src/components/content/ContactClusterCard.tsx",
+          "src/components/content/ContactPointCard.tsx",
+          "src/components/modals/ContactClusterModal.tsx",
+          "src/components/modals/ContactPointModal.tsx"
+        ]
+      },
+      {
+        "name": "Value Table System",
+        "description": "Complex pricing and value management system for medical procedures. Includes Excel import/export functionality, value calculations, and detailed breakdowns of medical fees, exam costs, and materials.",
+        "files": [
+          "src/components/content/ValoresContent.tsx",
+          "src/components/modals/ValueTableModal.tsx",
+          "src/components/modals/ValueTableItemModal.tsx"
+        ]
+      },
+      {
+        "name": "Office Management",
+        "description": "Management system for medical offices/consultórios organized by categories. Supports office allocation, scheduling, and categorization.",
+        "files": [
+          "src/components/content/ConsultoriosContent.tsx",
+          "src/components/content/OfficeCategoriesView.tsx",
+          "src/components/content/OfficeItemCard.tsx",
+          "src/components/content/OfficeListItem.tsx",
+          "src/components/modals/OfficeModal.tsx",
+          "src/components/modals/OfficeCategoryModal.tsx"
+        ]
+      },
+      {
+        "name": "Professionals Management",
+        "description": "System for managing medical professionals with detailed information including specialties, age ranges served, fitting acceptance, and contact details.",
+        "files": [
+          "src/components/content/ProfissionaisContent.tsx",
+          "src/components/content/ProfessionalListItem.tsx",
+          "src/components/modals/ProfessionalModal.tsx",
+          "src/components/modals/ProfessionalDetailsModal.tsx"
+        ]
+      },
+      {
+        "name": "Notes and Annotations",
+        "description": "Annotation system for general notes and specialized stomatotherapy notes. Supports categorization, search, and detailed information management.",
+        "files": [
+          "src/components/content/AnotacoesContent.tsx",
+          "src/components/modals/AnnotationModal.tsx",
+          "src/components/modals/StomatotherapyModal.tsx",
+          "src/components/modals/AnnotationDetailsModal.tsx"
+        ]
+      },
+      {
+        "name": "Messages/Notices System",
+        "description": "Internal messaging system for team communication. Supports sector-based filtering, message creation, and display with timestamps.",
+        "files": [
+          "src/components/content/RecadosContent.tsx",
+          "src/components/NoticeSheet.tsx",
+          "src/components/modals/NoticeModal.tsx"
+        ]
+      },
+      {
+        "name": "User Management",
+        "description": "Admin-only user management system for managing team members, roles, and permissions. Includes user creation, editing, and role assignment.",
+        "files": [
+          "src/components/content/UsuariosContent.tsx",
+          "src/components/modals/UserModal.tsx"
+        ]
+      },
+      {
+        "name": "Global Search",
+        "description": "Comprehensive search functionality across all data types (scripts, exams, contacts, professionals, etc.) with real-time results and keyboard shortcuts (Ctrl+K).",
+        "files": [
+          "src/components/GlobalSearch.tsx",
+          "src/pages/SearchResults.tsx"
+        ]
+      },
+      {
+        "name": "Data Context and State Management",
+        "description": "Centralized data management using React Context with Supabase integration. Handles all CRUD operations, data synchronization, and local storage fallback.",
+        "files": [
+          "src/contexts/DataContext.tsx",
+          "src/contexts/DataContextSupabase.tsx"
+        ]
+      },
+      {
+        "name": "Theme System",
+        "description": "Dark/light theme support with system preference detection and user preference persistence.",
+        "files": [
+          "src/contexts/ThemeContext.tsx"
+        ]
+      },
+      {
+        "name": "Navigation and Layout",
+        "description": "Main application layout with sidebar navigation, header with user profile, and responsive design. Includes mobile-responsive navigation.",
+        "files": [
+          "src/components/Header.tsx",
+          "src/components/Sidebar.tsx",
+          "src/components/Footer.tsx",
+          "src/layouts/MainLayout.tsx"
+        ]
+      },
+      {
+        "name": "Data Migration",
+        "description": "JSON-based data import/export system for migrating data between environments or backing up data. Supports full data replacement.",
+        "files": [
+          "src/components/modals/MigrateDataModal.tsx"
+        ]
+      },
+      {
+        "name": "Excel Integration",
+        "description": "Excel file import functionality for value tables, supporting automatic data parsing and synchronization.",
+        "files": [
+          "src/components/content/ValoresContent.tsx"
+        ]
+      },
+      {
+        "name": "Drag and Drop Functionality",
+        "description": "Sortable lists with drag-and-drop reordering using @dnd-kit for scripts and other ordered items.",
+        "files": [
+          "src/components/SortableList.tsx"
+        ]
+      },
+      {
+        "name": "Error Handling",
+        "description": "Global error boundary for catching and displaying React errors gracefully.",
+        "files": [
+          "src/components/ErrorBoundary.tsx"
+        ]
+      },
+      {
+        "name": "Responsive Design Utilities",
+        "description": "Custom hooks and utilities for responsive design and mobile detection.",
+        "files": [
+          "src/hooks/use-mobile.tsx"
+        ]
+      },
+      {
+        "name": "Toast Notifications",
+        "description": "Toast notification system for user feedback on actions and errors.",
+        "files": [
+          "src/hooks/use-toast.ts"
+        ]
+      },
+      {
+        "name": "Form Validation",
+        "description": "Zod schemas for form validation across all data entry forms.",
+        "files": [
+          "src/schemas/annotationSchema.ts",
+          "src/schemas/categorySchema.ts",
+          "src/schemas/contactSchema.ts",
+          "src/schemas/examSchema.ts",
+          "src/schemas/officeSchema.ts",
+          "src/schemas/professionalSchema.ts",
+          "src/schemas/scriptSchema.ts"
+        ]
+      },
+      {
+        "name": "Supabase Integration",
+        "description": "Complete Supabase client setup with authentication, database queries, and real-time subscriptions.",
+        "files": [
+          "src/integrations/supabase/client.ts",
+          "src/integrations/supabase/types.ts"
+        ]
+      }
+    ]
+  }
+}

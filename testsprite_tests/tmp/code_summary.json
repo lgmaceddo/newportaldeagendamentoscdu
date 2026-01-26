@@ -1,0 +1,220 @@
+{
+  "tech_stack": [
+    "TypeScript",
+    "React 18",
+    "Vite",
+    "Supabase",
+    "Tailwind CSS",
+    "Shadcn UI",
+    "React Router DOM",
+    "React Query",
+    "Zod",
+    "React Hook Form",
+    "Radix UI",
+    "Lucide React",
+    "XLSX"
+  ],
+  "features": [
+    {
+      "name": "Authentication System",
+      "description": "Complete authentication flow with Supabase Auth including login, signup, password reset, and password update. Supports email/password authentication with role-based access control (admin/user).",
+      "files": [
+        "src/contexts/AuthContext.tsx",
+        "src/pages/Auth.tsx",
+        "src/contexts/UserRoleContext.tsx"
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Main dashboard displaying key metrics, allocation statistics, tasks, and notes. Shows doctor allocation by period (morning/afternoon), exam counts, and role-specific information.",
+      "files": [
+        "src/components/content/DashboardContent.tsx",
+        "src/pages/Index.tsx"
+      ]
+    },
+    {
+      "name": "Scripts Management",
+      "description": "System for managing reusable scripts organized by categories. Supports CRUD operations, drag-and-drop ordering, copy to clipboard functionality, and custom ordering.",
+      "files": [
+        "src/components/content/ScriptsContent.tsx",
+        "src/components/modals/ScriptModal.tsx",
+        "src/components/modals/CategoryModal.tsx"
+      ]
+    },
+    {
+      "name": "Exams Management",
+      "description": "Comprehensive exam management system with categorization, search, filtering, and detailed information including exam codes, preparation instructions, and related data.",
+      "files": [
+        "src/components/content/ExamesContent.tsx",
+        "src/components/modals/ExamModal.tsx",
+        "src/components/modals/ExamDetailsModal.tsx",
+        "src/hooks/use-exam-map.tsx"
+      ]
+    },
+    {
+      "name": "Contacts Management",
+      "description": "Contact management system organized by clusters and contact points. Supports hierarchical organization, phone numbers, emails, and notes.",
+      "files": [
+        "src/components/content/ContatosContent.tsx",
+        "src/components/content/ContactClusterCard.tsx",
+        "src/components/content/ContactPointCard.tsx",
+        "src/components/modals/ContactClusterModal.tsx",
+        "src/components/modals/ContactPointModal.tsx"
+      ]
+    },
+    {
+      "name": "Value Table System",
+      "description": "Complex pricing and value management system for medical procedures. Includes Excel import/export functionality, value calculations, and detailed breakdowns of medical fees, exam costs, and materials.",
+      "files": [
+        "src/components/content/ValoresContent.tsx",
+        "src/components/modals/ValueTableModal.tsx",
+        "src/components/modals/ValueTableItemModal.tsx"
+      ]
+    },
+    {
+      "name": "Office Management",
+      "description": "Management system for medical offices/consultórios organized by categories. Supports office allocation, scheduling, and categorization.",
+      "files": [
+        "src/components/content/ConsultoriosContent.tsx",
+        "src/components/content/OfficeCategoriesView.tsx",
+        "src/components/content/OfficeItemCard.tsx",
+        "src/components/content/OfficeListItem.tsx",
+        "src/components/modals/OfficeModal.tsx",
+        "src/components/modals/OfficeCategoryModal.tsx"
+      ]
+    },
+    {
+      "name": "Professionals Management",
+      "description": "System for managing medical professionals with detailed information including specialties, age ranges served, fitting acceptance, and contact details.",
+      "files": [
+        "src/components/content/ProfissionaisContent.tsx",
+        "src/components/content/ProfessionalListItem.tsx",
+        "src/components/modals/ProfessionalModal.tsx",
+        "src/components/modals/ProfessionalDetailsModal.tsx"
+      ]
+    },
+    {
+      "name": "Notes and Annotations",
+      "description": "Annotation system for general notes and specialized stomatotherapy notes. Supports categorization, search, and detailed information management.",
+      "files": [
+        "src/components/content/AnotacoesContent.tsx",
+        "src/components/modals/AnnotationModal.tsx",
+        "src/components/modals/StomatotherapyModal.tsx",
+        "src/components/modals/AnnotationDetailsModal.tsx"
+      ]
+    },
+    {
+      "name": "Messages/Notices System",
+      "description": "Internal messaging system for team communication. Supports sector-based filtering, message creation, and display with timestamps.",
+      "files": [
+        "src/components/content/RecadosContent.tsx",
+        "src/components/NoticeSheet.tsx",
+        "src/components/modals/NoticeModal.tsx"
+      ]
+    },
+    {
+      "name": "User Management",
+      "description": "Admin-only user management system for managing team members, roles, and permissions. Includes user creation, editing, and role assignment.",
+      "files": [
+        "src/components/content/UsuariosContent.tsx",
+        "src/components/modals/UserModal.tsx"
+      ]
+    },
+    {
+      "name": "Global Search",
+      "description": "Comprehensive search functionality across all data types (scripts, exams, contacts, professionals, etc.) with real-time results and keyboard shortcuts (Ctrl+K).",
+      "files": [
+        "src/components/GlobalSearch.tsx",
+        "src/pages/SearchResults.tsx"
+      ]
+    },
+    {
+      "name": "Data Context and State Management",
+      "description": "Centralized data management using React Context with Supabase integration. Handles all CRUD operations, data synchronization, and local storage fallback.",
+      "files": [
+        "src/contexts/DataContext.tsx",
+        "src/contexts/DataContextSupabase.tsx"
+      ]
+    },
+    {
+      "name": "Theme System",
+      "description": "Dark/light theme support with system preference detection and user preference persistence.",
+      "files": [
+        "src/contexts/ThemeContext.tsx"
+      ]
+    },
+    {
+      "name": "Navigation and Layout",
+      "description": "Main application layout with sidebar navigation, header with user profile, and responsive design. Includes mobile-responsive navigation.",
+      "files": [
+        "src/components/Header.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/Footer.tsx",
+        "src/layouts/MainLayout.tsx"
+      ]
+    },
+    {
+      "name": "Data Migration",
+      "description": "JSON-based data import/export system for migrating data between environments or backing up data. Supports full data replacement.",
+      "files": [
+        "src/components/modals/MigrateDataModal.tsx"
+      ]
+    },
+    {
+      "name": "Excel Integration",
+      "description": "Excel file import functionality for value tables, supporting automatic data parsing and synchronization.",
+      "files": [
+        "src/components/content/ValoresContent.tsx"
+      ]
+    },
+    {
+      "name": "Drag and Drop Functionality",
+      "description": "Sortable lists with drag-and-drop reordering using @dnd-kit for scripts and other ordered items.",
+      "files": [
+        "src/components/SortableList.tsx"
+      ]
+    },
+    {
+      "name": "Error Handling",
+      "description": "Global error boundary for catching and displaying React errors gracefully.",
+      "files": [
+        "src/components/ErrorBoundary.tsx"
+      ]
+    },
+    {
+      "name": "Responsive Design Utilities",
+      "description": "Custom hooks and utilities for responsive design and mobile detection.",
+      "files": [
+        "src/hooks/use-mobile.tsx"
+      ]
+    },
+    {
+      "name": "Toast Notifications",
+      "description": "Toast notification system for user feedback on actions and errors.",
+      "files": [
+        "src/hooks/use-toast.ts"
+      ]
+    },
+    {
+      "name": "Form Validation",
+      "description": "Zod schemas for form validation across all data entry forms.",
+      "files": [
+        "src/schemas/annotationSchema.ts",
+        "src/schemas/categorySchema.ts",
+        "src/schemas/contactSchema.ts",
+        "src/schemas/examSchema.ts",
+        "src/schemas/officeSchema.ts",
+        "src/schemas/professionalSchema.ts",
+        "src/schemas/scriptSchema.ts"
+      ]
+    },
+    {
+      "name": "Supabase Integration",
+      "description": "Complete Supabase client setup with authentication, database queries, and real-time subscriptions.",
+      "files": [
+        "src/integrations/supabase/client.ts",
+        "src/integrations/supabase/types.ts"
+      ]
+    }
+  ]
+}

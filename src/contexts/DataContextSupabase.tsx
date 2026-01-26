@@ -345,7 +345,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (!newED[exam.category_id]) newED[exam.category_id] = [];
           newED[exam.category_id].push({
             ...exam,
-            location: safeParse(exam.location, [])
+            categoryId: exam.category_id,
+            location: safeParse(exam.location, []),
+            additionalInfo: exam.additional_info,
+            schedulingRules: exam.scheduling_rules,
+            valueTableCode: exam.value_table_code
           });
         });
         setExamData(newED);
@@ -471,8 +475,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         iiRes.data.forEach((item: any) => {
-          if (iData[item.tag_id]) iData[item.tag_id].push(item);
-          if (eData[item.tag_id]) eData[item.tag_id].push(item);
+          const itemMapped = {
+            ...item,
+            tagId: item.tag_id,
+            userId: item.user_id
+          };
+          if (iData[item.tag_id]) iData[item.tag_id].push(itemMapped);
+          if (eData[item.tag_id]) eData[item.tag_id].push(itemMapped);
         });
         setInfoTags(iTags); setInfoData(iData); setEstomaterapiaTags(eTags); setEstomaterapiaData(eData);
       }
@@ -957,7 +966,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addExam = async (categoryId: string, exam: ExamItem) => {
     setExamData(prev => ({ ...prev, [categoryId]: [...(prev[categoryId] || []), exam] }));
     try {
-      const { error } = await supabase.from('exams').insert({ id: exam.id, category_id: categoryId, title: exam.title, location: JSON.stringify(exam.location), additional_info: exam.additionalInfo, scheduling_rules: exam.schedulingRules });
+      const { error } = await supabase.from('exams').insert({
+        id: exam.id,
+        category_id: categoryId,
+        title: exam.title,
+        location: JSON.stringify(exam.location),
+        additional_info: exam.additionalInfo,
+        scheduling_rules: exam.schedulingRules,
+        value_table_code: exam.valueTableCode
+      });
       if (error) throw error;
       toast.success("Exame adicionado!");
     } catch (error) {
@@ -972,6 +989,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (updates.location) dbUpdates.location = JSON.stringify(updates.location);
     if (updates.additionalInfo !== undefined) { dbUpdates.additional_info = updates.additionalInfo; delete dbUpdates.additionalInfo; }
     if (updates.schedulingRules !== undefined) { dbUpdates.scheduling_rules = updates.schedulingRules; delete dbUpdates.schedulingRules; }
+    if (updates.valueTableCode !== undefined) { dbUpdates.value_table_code = updates.valueTableCode; delete dbUpdates.valueTableCode; }
 
     try {
       const { error } = await supabase.from('exams').update(dbUpdates).eq('id', examId);

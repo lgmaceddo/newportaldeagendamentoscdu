@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8080",
+  "loginUser": "lgmaceddo@hotmail.com",
+  "loginPassword": "Maceddo2014*",
+  "executionArgs": {
+    "projectName": "newportaldeagendamentoscdu",
+    "projectPath": "/Users/luizgustavomacedosegura/Library/Mobile Documents/com~apple~CloudDocs/NOVOS MAC/UNIMED/Portal Unimed/PORTAL /agendamento-cdu-main/newportaldeagendamentoscdu",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-_hqstPMbGOuSsKfWlmLLzxoEZX5a2KLf5lhkntnqml9_aEMEG9P_PtA135HGE96dy6pgw-_D2VO261nKb_WinXmZKK7Sxgu76dp9PiMez_mFyxgzrTWaA7I_Odo_2t5KCzU"
+    }
+  },
+  "proxy": "http://dfc099ed-2fc1-46b6-bd87-da6734234d2a:vvQNKLKEsx6cbUsfWvy3Es4mAeorbF1d@tun.testsprite.com:8080"
+}

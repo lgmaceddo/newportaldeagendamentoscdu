@@ -1,0 +1,835 @@
+[
+  {
+    "id": "TC001",
+    "title": "Login with valid credentials",
+    "description": "Verify that a user can successfully log in with valid email and password and is redirected to the dashboard with appropriate permissions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page"
+      },
+      {
+        "type": "action",
+        "description": "Input valid registered email and correct password"
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is redirected to the dashboard page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that dashboard displays data according to user's role and sector permissions"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Login with invalid credentials",
+    "description": "Verify that the system rejects login attempts with incorrect email or password and displays clear error messages.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page"
+      },
+      {
+        "type": "action",
+        "description": "Input valid email with incorrect password"
+      },
+      {
+        "type": "action",
+        "description": "Click on the login button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that login fails with an error message about invalid credentials"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Password reset flow",
+    "description": "Validate that a user can successfully reset their password using the password recovery option and receive confirmation.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the login page"
+      },
+      {
+        "type": "action",
+        "description": "Click on the 'forgot password' link"
+      },
+      {
+        "type": "action",
+        "description": "Enter registered email and submit password reset request"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that a confirmation message is shown indicating email sent for password reset"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Dashboard load with role-based data",
+    "description": "Verify the main dashboard loads with metrics and information filtered appropriately by user role and sector permissions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user with specific sector and role"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to dashboard"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify dashboard metrics, allocations, tasks, and recados are filtered by the user's sector"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify role-specific widgets and information are displayed correctly"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Create, edit, delete script categories",
+    "description": "Verify that users with coordinator permissions can create new script categories, edit existing ones, and delete them, with changes persisting.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to script categories management"
+      },
+      {
+        "type": "action",
+        "description": "Create a new script category with valid data"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new category appears in the list"
+      },
+      {
+        "type": "action",
+        "description": "Edit the newly created category's name"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the edited name is saved and shown correctly"
+      },
+      {
+        "type": "action",
+        "description": "Delete the category"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the category is removed from the list"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Scripts drag-and-drop reordering",
+    "description": "Validate that scripts within a category can be reordered using drag-and-drop and that the order is saved and restored after refresh.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login with appropriate permissions"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to scripts page and open a category with multiple scripts"
+      },
+      {
+        "type": "action",
+        "description": "Drag a script from its position to a new position within the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the visual order updates immediately"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the changed order persists after reload"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Copy script content to clipboard",
+    "description": "Verify that clicking the copy button on a script copies the script text to the clipboard and shows a confirmation toast.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to scripts module"
+      },
+      {
+        "type": "action",
+        "description": "Click on copy icon/button for a specific script"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify clipboard contains the expected script text"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a confirmation toast notification is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Exam management CRUD operations",
+    "description": "Verify that user with coordinator permissions can create, edit, view details and delete medical exams with all related fields correctly handled.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to exams module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new exam with valid data including code, preparation instructions, anestesia and linked values"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new exam appears correctly in the list"
+      },
+      {
+        "type": "action",
+        "description": "Open exam details modal for the created exam"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify detailed information is displayed correctly"
+      },
+      {
+        "type": "action",
+        "description": "Edit the exam information and save changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes are saved and reflected in the list and details"
+      },
+      {
+        "type": "action",
+        "description": "Delete the exam"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify exam is removed and no longer accessible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Contact management with clusters and contact points",
+    "description": "Verify creation, editing, viewing and deletion of contact groups (clusters) and their contact points, ensuring hierarchical relationships are maintained.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to contacts module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new contact cluster with a name and description"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify cluster appears in the list"
+      },
+      {
+        "type": "action",
+        "description": "Add one or more contact points to the cluster with valid phone, email or notes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify contact points appear under the cluster with correct information"
+      },
+      {
+        "type": "action",
+        "description": "Edit a contact point's details and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates persist"
+      },
+      {
+        "type": "action",
+        "description": "Delete a contact point and delete the cluster"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify deletions remove the items from the interface"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Click-to-call and click-to-WhatsApp functionality in contacts",
+    "description": "Verify that phone numbers support click-to-call action and WhatsApp numbers open the WhatsApp interface correctly when clicked.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to contacts and locate contact points with phone and WhatsApp numbers"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify click on phone number triggers phone call action (or tel: link)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify click on WhatsApp number opens WhatsApp chat interface or link"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Medical value table import via Excel",
+    "description": "Verify that coordinators can import complex medical value tables via Excel files and that the data updates correctly with feedback about errors or successful import.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the values table management page"
+      },
+      {
+        "type": "action",
+        "description": "Upload a valid Excel file with values for procedures, fees and gender-based pricing"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the data is parsed and loaded correctly in the system"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success notification is displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Value table import with invalid Excel file",
+    "description": "Verify that the system detects invalid Excel file format or corrupted data during upload and shows detailed error messages without corrupting existing data.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to the values table import interface"
+      },
+      {
+        "type": "action",
+        "description": "Upload an invalid or malformed Excel file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a clear error message is shown describing the import problem"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify existing value tables remain unchanged"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Professional management actions",
+    "description": "Verify that professionals can be created, edited with specialties and contact details, viewed with details, and deleted appropriately by authorized users.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to professionals module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new professional with required and optional data including specialties and contact info"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new professional appears in the list"
+      },
+      {
+        "type": "action",
+        "description": "Edit professional details and save"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify changes are reflected"
+      },
+      {
+        "type": "action",
+        "description": "View professional details in detail modal or page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify detailed info including specialties and history are displayed"
+      },
+      {
+        "type": "action",
+        "description": "Delete the professional record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the professional is removed from the list"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Consultórios (Offices) CRUD and categorization",
+    "description": "Verify creation, editing, deleting and categorizing offices with schedules, allocations, and related professionals function correctly within the system.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as coordinator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to offices module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new office with category, hours, attendees and linked professionals"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify office is listed with correct details"
+      },
+      {
+        "type": "action",
+        "description": "Edit office information including schedule and professionals"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates are saved and displayed"
+      },
+      {
+        "type": "action",
+        "description": "Delete an office record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify office is removed"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Annotations and stoma annotations management",
+    "description": "Validate creation, editing, searching and privacy settings of general annotations and specialized stoma therapy notes with tags and attachments.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to annotations module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new annotation with tags and optional attachment upload"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify annotation appears in list and details"
+      },
+      {
+        "type": "action",
+        "description": "Edit annotation, including changing privacy settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify privacy and changes persist and affect visibility"
+      },
+      {
+        "type": "action",
+        "description": "Search annotations by tag and keywords"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify search returns appropriate results"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Internal messaging (recados) creation and filtering",
+    "description": "Verify users can create internal messages, filter messages by sector, and view message history with timestamps correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to internal messages (recados) module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new message targeted to user or sector groups"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify message appears in the list with correct timestamp"
+      },
+      {
+        "type": "action",
+        "description": "Use sector filter to view messages only related to specific sector"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify messages are correctly filtered and displayed"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "User management by administrators",
+    "description": "Verify that administrators can create, edit, assign roles and sectors, and delete user accounts, enforcing correct role-based restrictions and permissions.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as administrator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to user management module"
+      },
+      {
+        "type": "action",
+        "description": "Create a new user with email, role (admin/user), and assign sectors"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new user is created and listed with correct roles and sectors"
+      },
+      {
+        "type": "action",
+        "description": "Edit user roles and sector assignments"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates are saved and reflected in permissions"
+      },
+      {
+        "type": "action",
+        "description": "Delete a user"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is removed and access revoked"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Global real-time search functionality",
+    "description": "Verify that the global search bar returns real-time, accurate results grouped by data type and respects user permissions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user"
+      },
+      {
+        "type": "action",
+        "description": "Access global search via header or keyboard shortcut (Ctrl/Cmd + K)"
+      },
+      {
+        "type": "action",
+        "description": "Type partial and full keywords for scripts, exams, contacts, professionals, and notes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify results update in real-time as user types"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify results are grouped by data categories"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify results only include items the user has permission to access"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Data migration with JSON import and validation",
+    "description": "Validate that authorized users can perform data migration by importing JSON files, with validation preventing corrupted or invalid data and options for replacement or sync.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as administrator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to data migration interface"
+      },
+      {
+        "type": "action",
+        "description": "Upload a valid JSON export file for data migration"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify JSON structure validates successfully"
+      },
+      {
+        "type": "action",
+        "description": "Choose migration options: full replacement or synchronization"
+      },
+      {
+        "type": "action",
+        "description": "Confirm data migration process"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify data in the system reflects imported data accordingly without errors"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Data migration with invalid JSON file",
+    "description": "Verify the system rejects invalid or malformed JSON files during data migration and provides a clear error message without impacting existing data.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as administrator"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to data migration interface"
+      },
+      {
+        "type": "action",
+        "description": "Upload an invalid or corrupted JSON file"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error is shown with details on failure"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify current system data remains unchanged"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Theme toggling and persistence",
+    "description": "Verify dark/light theme toggle works, detects system preferences on first load, and persists user preference across sessions.",
+    "category": "functional",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open application in browser respecting system dark mode settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI theme matches system preference by default"
+      },
+      {
+        "type": "action",
+        "description": "Toggle theme manually from settings or theme switcher"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify UI theme switches immediately"
+      },
+      {
+        "type": "action",
+        "description": "Reload the application"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify chosen theme is persisted and applied"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Responsive layout and mobile adaptation",
+    "description": "Verify that the application layout including sidebar, header, modals and lists adapts correctly and remains usable on various screen sizes including mobile devices.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open application on desktop resolution"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sidebar, header and content layout are displayed properly"
+      },
+      {
+        "type": "action",
+        "description": "Resize window or open on mobile device or emulator"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sidebar collapses or changes to mobile friendly menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify modals and content are scrollable and usable on small screens"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Form validation with Zod schemas",
+    "description": "Verify all data entry forms for scripts, exams, professionals, offices and annotations validate input data with proper error messages inline on invalid inputs.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to any data entry form (e.g. new script or exam creation)"
+      },
+      {
+        "type": "action",
+        "description": "Submit form with empty mandatory fields"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify inline validation error messages prompt the user to fill required fields"
+      },
+      {
+        "type": "action",
+        "description": "Input data with invalid formats or out-of-bound values"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify specific validation errors appear for each invalid input"
+      },
+      {
+        "type": "action",
+        "description": "Correct all validation errors and submit form successfully"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify form submission succeeds and data is saved"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Realtime data updates via Supabase Realtime",
+    "description": "Verify that changes made to data in one session are pushed and updated in real-time in other logged-in sessions without refresh.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as user in two different browser windows or devices"
+      },
+      {
+        "type": "action",
+        "description": "In one window, create/edit a data record such as a script or exam"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that the change is reflected in the other session's UI instantly or within defined realtime delay"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Row Level Security enforcement on sensitive data",
+    "description": "Verify that users cannot access sensitive data they are unauthorized for, as enforced by Supabase row level security policies.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as a user with restricted sector or role"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to access data from another sector or restricted categories such as other users' notes or sensitive exams"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied or no data is returned"
+      }
+    ]
+  }
+]
