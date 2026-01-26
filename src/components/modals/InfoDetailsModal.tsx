@@ -1,11 +1,10 @@
-import { X, FileText, Info, Clock, Tag } from "lucide-react";
+import { X, Clock, Tag, FileText, Info } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InfoItem, InfoTag } from "@/types/data";
 import { cn } from "@/lib/utils";
 import { getCategoryBadgeClasses } from "@/lib/categoryColors";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface InfoDetailsModalProps {
   isOpen: boolean;
@@ -16,85 +15,98 @@ interface InfoDetailsModalProps {
 
 export const InfoDetailsModal = ({ isOpen, onClose, item, tag }: InfoDetailsModalProps) => {
   const tagClasses = tag ? getCategoryBadgeClasses(tag.color) : 'bg-muted text-muted-foreground';
-  const hasAdditionalInfo = !!item.info;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden p-0 flex flex-col">
-        <div className="p-6 flex-shrink-0">
+      <DialogContent className="max-w-3xl max-h-[95vh] overflow-y-auto p-0">
+        <div className="p-6">
           <DialogHeader>
             <div className="flex justify-between items-start border-b pb-4">
-              <DialogTitle className="text-2xl font-bold text-primary pr-8">
+              <DialogTitle className="text-2xl font-bold text-primary pr-8 leading-tight">
                 {item.title}
               </DialogTitle>
-              <button 
-                onClick={onClose} 
+              <button
+                onClick={onClose}
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Fechar"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </DialogHeader>
 
-          {/* Metadata */}
-          <div className="flex flex-wrap gap-4 mt-4 text-sm text-muted-foreground border-b pb-4 mb-6">
-            <div className="flex items-center gap-1">
-              <Tag className="h-4 w-4 text-primary" />
-              <Badge className={cn("text-xs font-semibold", tagClasses)}>
-                {tag?.name.toUpperCase() || 'SEM ETIQUETA'}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span className="text-sm">Atualizado em: {item.date}</span>
-            </div>
-          </div>
-        </div>
+          <div className="space-y-6 mt-6">
+            {/* Metadados (Etiqueta e Data) - Container estilo Exames */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/20">
+              <div className="flex items-start gap-3">
+                <Tag className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Etiqueta</p>
+                  <div className="mt-1">
+                    <Badge className={cn("text-xs font-semibold", tagClasses)}>
+                      {tag?.name.toUpperCase() || 'SEM ETIQUETA'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-        {/* Content Body - Two Columns */}
-        <div className={cn(
-          "flex-1 overflow-hidden",
-          hasAdditionalInfo ? "grid grid-cols-1 md:grid-cols-2" : "grid grid-cols-1"
-        )}>
-          {/* Coluna Principal: Conteúdo Detalhado */}
-          <ScrollArea className={cn(
-            "p-6",
-            hasAdditionalInfo && "border-r border-border"
-          )}>
-            <div className="space-y-4">
-              <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Conteúdo Detalhado
-              </h3>
-              <div className="bg-card p-4 rounded-lg border border-border/50 shadow-inner">
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                  {item.content}
-                </p>
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">Última Atualização</p>
+                  <p className="text-sm font-medium mt-1">
+                    {item.date}
+                  </p>
+                </div>
               </div>
             </div>
-          </ScrollArea>
 
-          {/* Coluna Secundária: Informações Adicionais */}
-          {hasAdditionalInfo && (
-            <ScrollArea className="p-6 bg-muted/10">
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <Info className="h-5 w-5 text-yellow-600" />
+            {/* Conteúdo Principal */}
+            {item.content && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Conteúdo
+                </h3>
+                <div className="bg-muted/30 rounded-lg p-4 border border-border">
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {item.content}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Informações Adicionais / Observações */}
+            {item.info && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                  <Info className="h-5 w-5" />
                   Informações Adicionais
                 </h3>
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                {/* Usando estilo similar ao 'Regras de Agendamento' do Exames (bg-primary/5) */}
+                <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
                   <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                     {item.info}
                   </p>
                 </div>
               </div>
-            </ScrollArea>
-          )}
+            )}
+
+            {/* Anexos (se houver - estrutura futura, mantendo consistência se adicionar) */}
+            {item.attachments && item.attachments.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-lg font-bold text-primary">Anexos</h3>
+                <div className="grid gap-2">
+                  {/* Placeholder para anexos se necessário implementar visualização */}
+                  <p className="text-sm text-muted-foreground">Há {item.attachments.length} anexo(s) disponível(is).</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="p-6 pt-4 border-t flex justify-end flex-shrink-0">
-          <Button variant="outline" onClick={onClose}>
+
+        <div className="p-6 pt-4 border-t flex justify-end">
+          <Button variant="outline" onClick={onClose} size="sm">
             Fechar
           </Button>
         </div>
