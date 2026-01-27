@@ -441,7 +441,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             title: cat.title,
             description: cat.description,
             destinationType: cat.destination_type,
-            groupName: cat.group_name
+            groupName: cat.group_name,
+            attendants: safeParse(cat.attendants, [])
           });
           newRcData[cat.id] = [];
         });
@@ -739,8 +740,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         for (const cat of parsed.recadoCategories) {
           const newCatId = getNewId(cat.id, idMap);
           await supabase.from('recado_categories').insert({
-            id: newCatId, title: cat.title, description: cat.description,
-            destination_type: cat.destinationType, group_name: cat.groupName
+            id: newCatId,
+            title: cat.title,
+            description: cat.description,
+            destination_type: cat.destinationType,
+            group_name: cat.groupName,
+            attendants: cat.attendants ? JSON.stringify(cat.attendants) : null
           });
 
           const items = parsed.recadoData[cat.id] || [];
@@ -1574,7 +1579,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const newCat = { ...category, id: crypto.randomUUID() };
     setRecadoCategories(prev => [...prev, newCat]);
     try {
-      const { error } = await supabase.from('recado_categories').insert({ id: newCat.id, title: newCat.title, description: newCat.description, destination_type: newCat.destinationType, group_name: newCat.groupName, order: 0 });
+      const { error } = await supabase.from('recado_categories').insert({
+        id: newCat.id,
+        title: newCat.title,
+        description: newCat.description,
+        destination_type: newCat.destinationType,
+        group_name: newCat.groupName,
+        order: 0,
+        attendants: newCat.attendants ? JSON.stringify(newCat.attendants) : null
+      });
       if (error) throw error;
       toast.success("Categoria de recados adicionada!");
     } catch (error) {
@@ -1586,7 +1599,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateRecadoCategory = async (category: RecadoCategory) => {
     setRecadoCategories(prev => prev.map(c => c.id === category.id ? category : c));
     try {
-      const { error } = await supabase.from('recado_categories').update({ title: category.title, description: category.description, destination_type: category.destinationType, group_name: category.groupName }).eq('id', category.id);
+      const { error } = await supabase.from('recado_categories').update({
+        title: category.title,
+        description: category.description,
+        destination_type: category.destinationType,
+        group_name: category.groupName,
+        attendants: category.attendants ? JSON.stringify(category.attendants) : null
+      }).eq('id', category.id);
       if (error) throw error;
     } catch (error) {
       console.error("Erro ao atualizar categoria de recados:", error);

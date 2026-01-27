@@ -23,10 +23,10 @@ interface RecadosContentProps {
 
 // Mapeamento de ícones para categorias (apenas para dar um toque visual)
 const getCategoryIcon = (categoryTitle: string) => {
-    const lowerTitle = categoryTitle.toLowerCase();
-    if (lowerTitle.includes('autorização') || lowerTitle.includes('guia')) return ClipboardList;
-    if (lowerTitle.includes('imagem') || lowerTitle.includes('exame')) return Zap;
-    return Folder;
+  const lowerTitle = categoryTitle.toLowerCase();
+  if (lowerTitle.includes('autorização') || lowerTitle.includes('guia')) return ClipboardList;
+  if (lowerTitle.includes('imagem') || lowerTitle.includes('exame')) return Zap;
+  return Folder;
 };
 
 export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
@@ -49,21 +49,21 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
     if (location.state?.searchResult?.type === 'recado') {
       const categoryId = location.state.searchResult.categoryId;
       const itemId = location.state.searchResult.itemId;
-      
+
       // Set the correct category
       if (categoryId) {
         setActiveCategory(categoryId);
       }
-      
+
       // Find and generate the specific recado
       const categoryItems = data[categoryId] || [];
       const item = categoryItems.find(i => i.id === itemId);
       const category = categories.find(c => c.id === categoryId);
-      
+
       if (item && category) {
         setSelectedItem({ item, category });
         setGeneratorModalOpen(true);
-        
+
         // Clear the location state to prevent re-triggering
         window.history.replaceState({}, document.title, location.pathname);
       }
@@ -81,13 +81,22 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
   }, [sortedCategories, activeCategory]);
 
   // Consolida todos os itens para a busca
-  const allItems: (RecadoItem & { categoryId: string, category: RecadoCategory })[] = sortedCategories.flatMap(cat => (data[cat.id] || []).map(item => ({ ...item, categoryId: cat.id, category: cat })) );
+  const allItems: (RecadoItem & { categoryId: string, category: RecadoCategory })[] = sortedCategories.flatMap(cat => (data[cat.id] || []).map(item => ({ ...item, categoryId: cat.id, category: cat })));
   const filteredItems = allItems
-    .filter((item) =>
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.title.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    .filter((item) => {
+      const searchLower = searchTerm.toLowerCase();
+      const attendantMatch = item.category.attendants?.some(at =>
+        at.name.toLowerCase().includes(searchLower) ||
+        at.chatNick.toLowerCase().includes(searchLower)
+      );
+
+      return (
+        item.title.toLowerCase().includes(searchLower) ||
+        item.content.toLowerCase().includes(searchLower) ||
+        item.category.title.toLowerCase().includes(searchLower) ||
+        attendantMatch
+      );
+    })
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
 
   // Itens a serem exibidos (filtrados se houver busca, ou apenas da categoria ativa)
@@ -194,7 +203,7 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
 
   const renderRecadoItem = (item: RecadoItem & { categoryId: string, category: RecadoCategory }) => {
     // Icon removido
-    
+
     return (
       <Card
         key={item.id}
@@ -206,13 +215,35 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
           {/* Header Section - Título simplificado (igual ao script) */}
           <div className="p-3 flex-shrink-0 flex items-center justify-between min-h-[56px] bg-primary/5 border-b border-border/50">
             <h3 className="font-bold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors flex items-center gap-2">
-              {/* Ícone removido aqui */}
               <span>{item.title}</span>
             </h3>
           </div>
-          
-          {/* Corpo do Card: REMOVIDO para compactar */}
-          
+
+          {/* Atendentes / Destino - DISCRETO E ELEGANTE */}
+          <div className="px-3 py-2 flex flex-col gap-1.5 flex-1 min-h-[40px]">
+            {item.category.destinationType === 'attendant' && item.category.attendants && item.category.attendants.length > 0 ? (
+              <div className="flex flex-wrap gap-1 items-center">
+                <Users className="h-3 w-3 text-muted-foreground mr-1" />
+                {item.category.attendants.map((at) => (
+                  <Badge key={at.id} variant="secondary" className="text-[9px] px-1 py-0 h-4 bg-primary/5 text-primary/80 border-primary/20 font-medium">
+                    {at.name}
+                  </Badge>
+                ))}
+              </div>
+            ) : item.category.destinationType === 'group' && item.category.groupName ? (
+              <div className="flex items-center gap-1">
+                <MessageCircle className="h-3 w-3 text-muted-foreground mr-1" />
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                  {item.category.groupName}
+                </span>
+              </div>
+            ) : (
+              <div className="text-[10px] text-muted-foreground italic px-0.5">
+                Sem destinatários
+              </div>
+            )}
+          </div>
+
           {/* Footer Actions */}
           <div className="px-3 py-2 bg-muted/20 border-t flex justify-end items-center gap-2 mt-auto flex-shrink-0">
             {canEditRecados && (
@@ -375,8 +406,8 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
                   {searchTerm
                     ? "Nenhum recado encontrado."
                     : sortedCategories.length === 0
-                    ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
-                    : "Nenhum recado nesta categoria. Clique em 'Novo Recado' para adicionar."
+                      ? "Crie uma categoria primeiro usando 'Gerenciar Categorias'."
+                      : "Nenhum recado nesta categoria. Clique em 'Novo Recado' para adicionar."
                   }
                 </p>
               </div>
