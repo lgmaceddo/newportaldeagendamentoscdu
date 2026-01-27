@@ -70,8 +70,11 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
     }
   }, [location.state, data, categories]);
 
-  // Ordena as categorias por título (apenas para inicialização, a reordenação manual prevalece)
-  const sortedCategories = useMemo(() => [...categories], [categories]);
+  // Ordena as categorias por título alfabeticamente
+  const sortedCategories = useMemo(() =>
+    [...categories].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')),
+    [categories]
+  );
 
   // Update activeCategory when categories change
   useEffect(() => {
@@ -130,12 +133,8 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
   };
 
   const handleReorderCategories = (oldIndex: number, newIndex: number) => {
-    reorderRecadoCategories(oldIndex, newIndex);
-    // Atualiza a categoria ativa para a nova posição, se necessário
-    const newActiveCategory = categories[newIndex]?.id;
-    if (newActiveCategory) {
-      setActiveCategory(newActiveCategory);
-    }
+    // Reordenação manual desativada em favor da ordem alfabética automática
+    // reorderRecadoCategories(oldIndex, newIndex);
   };
 
   // --- Item Handlers ---
@@ -294,19 +293,39 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
   const renderCategoryButton = (cat: RecadoCategory) => {
     const isSelected = activeCategory === cat.id && !searchTerm;
     return (
-      <button
-        onClick={() => {
-          setActiveCategory(cat.id);
-          setSearchTerm("");
-        }}
-        className={cn(
-          "whitespace-nowrap py-3 px-4 rounded-lg font-medium text-sm transition-colors duration-200 w-full text-left h-full",
-          "bg-card border rounded-lg hover:bg-muted/50",
-          isSelected ? "bg-primary text-primary-foreground border-primary shadow-md" : "text-muted-foreground hover:text-foreground"
+      <div className="relative group/cat">
+        <button
+          onClick={() => {
+            setActiveCategory(cat.id);
+            setSearchTerm("");
+          }}
+          className={cn(
+            "whitespace-nowrap py-3 px-4 pr-10 rounded-lg font-medium text-sm transition-all duration-200 w-full text-left h-full border-2",
+            isSelected
+              ? "bg-primary text-primary-foreground border-primary shadow-lg scale-[1.02]"
+              : "bg-card text-muted-foreground border-border/50 hover:border-primary/30 hover:bg-muted/30"
+          )}
+        >
+          {cat.title.toUpperCase()}
+        </button>
+        {canEditRecados && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditCategory(cat);
+            }}
+            className={cn(
+              "absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-all duration-200",
+              isSelected
+                ? "text-primary-foreground/80 hover:text-white hover:bg-white/20"
+                : "text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover/cat:opacity-100"
+            )}
+            title="Editar Categoria"
+          >
+            <Edit className="h-3.5 w-3.5" />
+          </button>
         )}
-      >
-        {cat.title.toUpperCase()}
-      </button>
+      </div>
     );
   };
 
@@ -357,16 +376,14 @@ export const RecadosContent = ({ categories, data }: RecadosContentProps) => {
             </div>
           </div>
           {sortedCategories.length > 0 && !searchTerm && (
-            <div className="border-b border-border pb-2">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Arraste para reordenar as categorias:</h3>
-              <SortableList
-                items={sortedCategories}
-                onReorder={handleReorderCategories}
-                renderItem={(cat) => renderCategoryButton(cat)}
-                className="flex flex-wrap gap-2 items-start"
-                itemClassName="flex-shrink-0 w-auto"
-                handleClassName="left-0"
-              />
+            <div className="border-t border-border/50 pt-4 mt-2">
+              <div className="flex flex-wrap gap-3 items-start">
+                {sortedCategories.map(cat => (
+                  <div key={cat.id} className="flex-shrink-0">
+                    {renderCategoryButton(cat)}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

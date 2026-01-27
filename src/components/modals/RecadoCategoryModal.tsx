@@ -60,6 +60,9 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
                     groupName: category.groupName || "",
                     attendants: category.attendants || [],
                 });
+                // Scroll to top when editing starts
+                const modalContent = document.querySelector('[role="dialog"] .overflow-y-auto');
+                if (modalContent) modalContent.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 form.reset({
                     title: "",
@@ -243,7 +246,7 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
                         </h3>
                         <div className="space-y-2">
                             {categories.length > 0 ? (
-                                categories.map((cat) => (
+                                [...categories].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')).map((cat) => (
                                     <div
                                         key={cat.id}
                                         className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
