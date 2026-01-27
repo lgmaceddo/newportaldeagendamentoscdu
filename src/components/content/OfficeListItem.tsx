@@ -83,14 +83,14 @@ export const OfficeListItem = ({ office, onEdit, onUpdate, onDelete, canEdit }: 
           <div className="flex items-center gap-2 mt-3">
             <Users className="h-4 w-4 text-primary flex-shrink-0" />
             <span className="font-medium text-sm text-muted-foreground">Atendentes:</span>
-            {office.attendants && office.attendants.length > 0 ? (
+            {office.attendants && office.attendants.filter(a => a && a.username).length > 0 ? (
               <div className="flex flex-wrap gap-1 ml-1">
-                {office.attendants.map((attendant, index) => (
+                {office.attendants.filter(a => a && a.username).map((attendant, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
                     className="text-xs px-2 py-0.5 bg-primary/5 text-primary hover:bg-primary/10 border border-primary/10 font-semibold"
-                    title={`${attendant.name} - Turno: ${attendant.shift}`}
+                    title={`${attendant.name || ""} - Turno: ${attendant.shift || ""}`}
                   >
                     {attendant.username}
                   </Badge>

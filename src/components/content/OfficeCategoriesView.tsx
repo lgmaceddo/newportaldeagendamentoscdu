@@ -192,7 +192,7 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                 </div>
             ) : (
                 <Accordion type="single" collapsible className="w-full space-y-2">
-                    {categories.map(cat => (
+                    {categories.filter(cat => cat && cat.id).map(cat => (
                         <AccordionItem value={cat.id} key={cat.id} className="border rounded-md px-2 bg-card">
                             <AccordionTrigger className="hover:no-underline py-3 px-2">
                                 <div className="flex items-center gap-2 w-full pr-4 text-left">
@@ -229,7 +229,7 @@ export const OfficeCategoriesView = ({ office, onUpdate, canEdit }: OfficeCatego
                                             Nenhum procedimento cadastrado nesta categoria.
                                         </p>
                                     ) : (
-                                        (items[cat.id] || []).map(item => (
+                                        (items[cat.id] || []).filter(item => item && item.id).map(item => (
                                             <Card key={item.id} className="bg-muted/10 border-l-4 border-l-primary/40 hover:border-l-primary transition-all shadow-sm">
                                                 <CardContent className="p-3">
                                                     <div className="flex justify-between items-start gap-3">

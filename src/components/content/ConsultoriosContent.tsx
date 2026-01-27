@@ -31,20 +31,27 @@ export const ConsultoriosContent = ({ data, onAdd, onUpdate, onDelete }: Consult
 
   // Ordena os consultórios por nome
   const sortedData = useMemo(() => {
-    return [...data].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    const list = Array.isArray(data) ? data : [];
+    return [...list].sort((a, b) => (a.name || "").localeCompare((b.name || ""), 'pt-BR'));
   }, [data]);
 
   const lowerSearchTerm = searchTerm.toLowerCase();
-  const filteredData = sortedData.filter((office) =>
-    office.name.toLowerCase().includes(lowerSearchTerm) ||
-    office.ramal.toLowerCase().includes(lowerSearchTerm) ||
-    office.schedule.toLowerCase().includes(lowerSearchTerm) ||
-    (office.specialties && office.specialties.some(s => s.toLowerCase().includes(lowerSearchTerm))) ||
-    (office.attendants && office.attendants.some(a =>
-      a.name.toLowerCase().includes(lowerSearchTerm) ||
-      a.username.toLowerCase().includes(lowerSearchTerm)
-    ))
-  );
+  const filteredData = sortedData.filter((office) => {
+    const name = office.name || "";
+    const ramal = office.ramal || "";
+    const schedule = office.schedule || "";
+
+    return (
+      name.toLowerCase().includes(lowerSearchTerm) ||
+      ramal.toLowerCase().includes(lowerSearchTerm) ||
+      schedule.toLowerCase().includes(lowerSearchTerm) ||
+      (office.specialties && office.specialties.some(s => (s || "").toLowerCase().includes(lowerSearchTerm))) ||
+      (office.attendants && office.attendants.some(a =>
+        (a.name || "").toLowerCase().includes(lowerSearchTerm) ||
+        (a.username || "").toLowerCase().includes(lowerSearchTerm)
+      ))
+    );
+  });
 
   // Efeito para lidar com a navegação de busca
   useEffect(() => {
