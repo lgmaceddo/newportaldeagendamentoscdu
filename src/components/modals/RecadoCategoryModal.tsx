@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { recadoCategorySchema, RecadoCategoryFormData } from "@/schemas/recadoSchema";
 import { RecadoCategory } from "@/types/data";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Edit, Users, MessageCircle, ChevronDown } from "lucide-react";
+import { Plus, Trash2, Edit, Users, MessageCircle, ChevronDown, Folder, Info } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -95,35 +95,38 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
     };
 
     const handleSubmit = (data: RecadoCategoryFormData) => {
-        // Double-check required fields before proceeding
-        if (!data.title?.trim()) {
-            toast({
-                title: "Erro de Validação",
-                description: "O campo 'Nome da Categoria' é obrigatório.",
-                variant: "destructive",
-            });
-            return;
-        }
-
         const finalData: Omit<RecadoCategory, "id"> = {
             title: data.title,
-            description: data.description,
+            description: data.description || "",
             destinationType: data.destinationType,
-            attendants: data.destinationType === 'attendant' ? data.attendants : undefined,
-            groupName: data.destinationType === 'group' ? data.groupName : undefined,
+            attendants: data.destinationType === 'attendant' ? (data.attendants || []) : [],
+            groupName: data.destinationType === 'group' ? (data.groupName || "") : "",
         };
 
         if (category) {
             onSave({ ...category, ...finalData });
+            toast({ title: "Categoria atualizada!" });
         } else {
             onSave(finalData);
+            toast({ title: "Categoria criada!" });
         }
         onClose();
     };
 
+    const onError = (errors: any) => {
+        console.error("Erro de validação no formulário:", errors);
+        const firstError = Object.values(errors)[0] as any;
+        if (firstError) {
+            toast({
+                variant: "destructive",
+                title: "Verifique os campos",
+                description: firstError.message || "Preencha todos os campos obrigatórios corretamente.",
+            });
+        }
+    };
+
     const handleCancelEdit = () => {
         form.reset();
-        setEditingCategory(undefined);
         if (category) {
             onClose(); // Se veio de fora pro edit, fecha
         }
@@ -154,7 +157,7 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
 
                         <TabsContent value="form" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
                             <Form {...form}>
-                                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                                <form onSubmit={form.handleSubmit(handleSubmit, onError)} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={form.control} name="title" render={({ field }) => (
                                             <FormItem>

@@ -2,25 +2,14 @@ import { z } from "zod";
 
 export const recadoCategorySchema = z.object({
   title: z.string().trim().min(1, "Título é obrigatório").max(100, "Máximo de 100 caracteres"),
-  description: z.string().trim().min(1, "Descrição é obrigatória").max(500, "Máximo de 500 caracteres"),
+  description: z.string().trim().max(500, "Máximo de 500 caracteres").optional().or(z.literal("")),
   destinationType: z.enum(['attendant', 'group']),
-  groupName: z.string().optional(),
+  groupName: z.string().optional().or(z.literal("")),
   attendants: z.array(z.object({
     id: z.string(),
     name: z.string().min(1),
     chatNick: z.string().min(1),
-  })).optional(),
-}).refine(data => {
-  if (data.destinationType === 'group' && !data.groupName?.trim()) {
-    return false;
-  }
-  if (data.destinationType === 'attendant' && (!data.attendants || data.attendants.length === 0)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "O nome do grupo ou pelo menos um atendente é obrigatório.",
-  path: ["groupName"],
+  })).optional().default([]),
 });
 
 export const recadoItemSchema = z.object({
