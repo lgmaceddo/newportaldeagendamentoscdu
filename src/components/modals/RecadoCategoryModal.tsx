@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface RecadoCategoryModalProps {
     isOpen: boolean;
@@ -30,6 +31,8 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
     const { toast } = useToast();
     const [newAttendantName, setNewAttendantName] = useState("");
     const [newAttendantNick, setNewAttendantNick] = useState("");
+
+    const [activeTab, setActiveTab] = useState<string>("form");
 
     const form = useForm<RecadoCategoryFormData>({
         resolver: zodResolver(recadoCategorySchema),
@@ -120,7 +123,15 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
 
     const handleCancelEdit = () => {
         form.reset();
-        onClose();
+        setEditingCategory(undefined);
+        if (category) {
+            onClose(); // Se veio de fora pro edit, fecha
+        }
+    };
+
+    const handleEditInModal = (cat: RecadoCategory) => {
+        onEdit(cat);
+        setActiveTab("form");
     };
 
     return (
@@ -131,168 +142,204 @@ export const RecadoCategoryModal = ({ isOpen, onClose, onSave, onEdit, onDelete,
                 </DialogHeader>
 
                 <div className="space-y-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 border-b pb-6">
-                            <h3 className="text-lg font-semibold text-primary">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-6">
+                            <TabsTrigger value="form">
                                 {category ? "Editar Categoria" : "Nova Categoria"}
-                            </h3>
+                            </TabsTrigger>
+                            <TabsTrigger value="list">
+                                Categorias Existentes ({categories.length})
+                            </TabsTrigger>
+                        </TabsList>
 
-                            <FormField control={form.control} name="title" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nome da Categoria</FormLabel>
-                                    <FormControl><Input {...field} placeholder="Ex: Solicitação de Guias" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <FormField control={form.control} name="description" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Descrição</FormLabel>
-                                    <FormControl><Textarea {...field} placeholder="Descreva o propósito desta categoria de recados" /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
+                        <TabsContent value="form" className="space-y-6 focus-visible:outline-none focus-visible:ring-0">
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField control={form.control} name="title" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="font-bold">Nome da Categoria <span className="text-destructive">*</span></FormLabel>
+                                                <FormControl><Input {...field} placeholder="Ex: Solicitação de Guias" className="bg-background" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="description" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="font-bold">Descrição <span className="text-destructive">*</span></FormLabel>
+                                                <FormControl><Input {...field} placeholder="Ex: Recados para o setor de guias" className="bg-background" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                    </div>
 
-                            <Separator />
+                                    {/* Destinatário */}
+                                    <div className="space-y-4 p-5 border-2 border-primary/10 rounded-xl bg-primary/5">
+                                        <FormField control={form.control} name="destinationType" render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel className="font-bold text-primary flex items-center gap-2">
+                                                    <Users className="h-4 w-4" /> Tipo de Destinatário:
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-6">
+                                                        <FormItem className="flex items-center space-x-2">
+                                                            <FormControl><RadioGroupItem value="attendant" /></FormControl>
+                                                            <FormLabel className="font-semibold cursor-pointer">Atendentes Individuais</FormLabel>
+                                                        </FormItem>
+                                                        <FormItem className="flex items-center space-x-2">
+                                                            <FormControl><RadioGroupItem value="group" /></FormControl>
+                                                            <FormLabel className="font-semibold cursor-pointer">Grupo Geral</FormLabel>
+                                                        </FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
 
-                            {/* Destinatário */}
-                            <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                                <FormField control={form.control} name="destinationType" render={({ field }) => (
-                                    <FormItem className="space-y-3">
-                                        <FormLabel className="font-bold text-primary flex items-center gap-2">
-                                            <Users className="h-4 w-4" /> Tipo de Destinatário:
-                                        </FormLabel>
-                                        <FormControl>
-                                            <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
-                                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="attendant" /></FormControl><FormLabel className="font-normal">Atendentes (Individual)</FormLabel></FormItem>
-                                                <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="group" /></FormControl><FormLabel className="font-normal">Grupo (Geral)</FormLabel></FormItem>
-                                            </RadioGroup>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
+                                        {destinationType === 'group' && (
+                                            <FormField control={form.control} name="groupName" render={({ field }) => (
+                                                <FormItem className="animate-in fade-in slide-in-from-top-1 duration-200">
+                                                    <FormLabel className="font-bold">Nome do Grupo <span className="text-destructive">*</span></FormLabel>
+                                                    <FormControl><Input {...field} placeholder="Ex: Grupo Autorização" className="bg-background" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )} />
+                                        )}
 
-                                {destinationType === 'group' && (
-                                    <FormField control={form.control} name="groupName" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Nome do Grupo (Ex: Grupo Autorização)</FormLabel>
-                                            <FormControl><Input {...field} placeholder="Nome do Grupo" /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )} />
-                                )}
-
-                                {destinationType === 'attendant' && (
-                                    <div className="space-y-4">
-                                        <Label className="font-bold text-primary">Gerenciar Atendentes</Label>
-                                        <div className="p-3 border rounded-lg space-y-3 bg-background">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
-                                                <div className="space-y-1 md:col-span-1">
-                                                    <Label className="text-xs">Nome Completo</Label>
-                                                    <Input value={newAttendantName} onChange={(e) => setNewAttendantName(e.target.value)} placeholder="Nome" />
+                                        {destinationType === 'attendant' && (
+                                            <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                <Label className="font-bold text-primary">Gerenciar Atendentes <span className="text-destructive">*</span></Label>
+                                                <div className="p-4 border-2 border-dashed border-primary/20 rounded-lg space-y-3 bg-background/50">
+                                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Nome Completo</Label>
+                                                            <Input value={newAttendantName} onChange={(e) => setNewAttendantName(e.target.value)} placeholder="Ex: Maria Silva" className="bg-background" />
+                                                        </div>
+                                                        <div className="space-y-1 md:col-span-2">
+                                                            <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">Nick do Chat</Label>
+                                                            <Input value={newAttendantNick} onChange={(e) => setNewAttendantNick(e.target.value)} placeholder="Ex: maria_exames" className="bg-background" />
+                                                        </div>
+                                                        <Button type="button" onClick={handleAddAttendant} className="bg-primary hover:bg-primary/90 h-10 w-full">
+                                                            <Plus className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <div className="space-y-1 md:col-span-1">
-                                                    <Label className="text-xs">Nick do Chat</Label>
-                                                    <Input value={newAttendantNick} onChange={(e) => setNewAttendantNick(e.target.value)} placeholder="Nick" />
+
+                                                {fields.length > 0 ? (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                                                        {fields.map((field, index) => (
+                                                            <div key={field.id} className="flex items-center justify-between gap-2 p-2.5 bg-background border rounded-lg shadow-sm group/item">
+                                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                                                        <Users className="h-4 w-4 text-primary" />
+                                                                    </div>
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <p className="text-sm font-bold truncate text-foreground">{field.name}</p>
+                                                                        <p className="text-[10px] text-muted-foreground font-mono">@{field.chatNick}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => remove(index)}
+                                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-4 text-sm text-muted-foreground bg-background/30 rounded-lg border border-dashed">
+                                                        Nenhum atendente adicionado. Adicione pelo menos um.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex justify-between items-center pt-4 border-t">
+                                        <Button type="button" variant="ghost" onClick={handleCancelEdit} className="text-muted-foreground">
+                                            Limpar / Cancelar
+                                        </Button>
+                                        <Button type="submit" size="lg" className="px-8 shadow-md">
+                                            {category ? "Salvar Alterações" : "Criar Categoria"}
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Form>
+                        </TabsContent>
+
+                        <TabsContent value="list" className="space-y-4 focus-visible:outline-none focus-visible:ring-0">
+                            <div className="grid grid-cols-1 gap-3">
+                                {categories.length > 0 ? (
+                                    [...categories].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')).map((cat) => (
+                                        <div
+                                            key={cat.id}
+                                            className={cn(
+                                                "flex items-center justify-between p-4 bg-background border-2 rounded-xl transition-all duration-200",
+                                                category?.id === cat.id ? "border-primary bg-primary/5 shadow-sm" : "hover:border-primary/30 hover:shadow-md"
+                                            )}
+                                        >
+                                            <div className="flex flex-col gap-1.5 min-w-0">
+                                                <span className="font-bold text-base text-foreground uppercase tracking-tight truncate">
+                                                    {cat.title}
+                                                </span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[11px] font-semibold flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                                        {cat.destinationType === 'group' ? (
+                                                            <><MessageCircle className="h-3 w-3" /> Grupo: {cat.groupName}</>
+                                                        ) : (
+                                                            <><Users className="h-3 w-3" /> {cat.attendants?.length || 0} Atendentes</>
+                                                        )}
+                                                    </span>
+                                                    {cat.description && (
+                                                        <span className="text-[11px] text-muted-foreground italic truncate">
+                                                            {cat.description}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <Button type="button" onClick={handleAddAttendant} className="bg-primary hover:bg-primary/90 h-10">
-                                                    <Plus className="h-4 w-4 mr-1" /> Adicionar
+                                            </div>
+                                            <div className="flex gap-2 flex-shrink-0 ml-4">
+                                                <Button
+                                                    size="icon"
+                                                    variant="secondary"
+                                                    onClick={() => handleEditInModal(cat)}
+                                                    className="h-9 w-9 text-primary hover:bg-primary hover:text-white"
+                                                    title="Editar"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    size="icon"
+                                                    variant="secondary"
+                                                    onClick={() => onDelete(cat.id)}
+                                                    className="h-9 w-9 text-destructive hover:bg-destructive hover:text-white"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                         </div>
-
-                                        {fields.length > 0 && (
-                                            <Collapsible className="space-y-2">
-                                                <CollapsibleTrigger asChild>
-                                                    <Button variant="outline" className="w-full justify-between">
-                                                        Lista de Atendentes ({fields.length})
-                                                        <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                                                    </Button>
-                                                </CollapsibleTrigger>
-                                                <CollapsibleContent className="space-y-2 p-2 border rounded-lg bg-background">
-                                                    {fields.map((field, index) => (
-                                                        <div key={field.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-                                                            <MessageCircle className="h-4 w-4 text-primary flex-shrink-0" />
-                                                            <p className="flex-1 text-sm font-medium">{field.name}</p>
-                                                            <p className="flex-1 text-sm text-muted-foreground">@{field.chatNick}</p>
-                                                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                                        </div>
-                                                    ))}
-                                                </CollapsibleContent>
-                                            </Collapsible>
-                                        )}
-                                        {form.formState.errors.groupName && (
-                                            <p className="text-sm text-destructive mt-1">{form.formState.errors.groupName.message}</p>
-                                        )}
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12 border-2 border-dashed rounded-2xl bg-muted/20">
+                                        <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                                            <Folder className="h-6 w-6 text-muted-foreground" />
+                                        </div>
+                                        <p className="text-muted-foreground font-medium">Nenhuma categoria encontrada.</p>
+                                        <Button variant="link" onClick={() => setActiveTab("form")}>
+                                            Crie a primeira agora
+                                        </Button>
                                     </div>
                                 )}
                             </div>
+                        </TabsContent>
+                    </Tabs>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t">
-                                {category && (
-                                    <Button type="button" variant="outline" onClick={handleCancelEdit}>Cancelar Edição</Button>
-                                )}
-                                <Button type="submit" disabled={!titleWatch?.trim()}>
-                                    {category ? "Atualizar Categoria" : "Salvar Nova Categoria"}
-                                </Button>
-                            </div>
-                        </form>
-                    </Form>
-
-                    <Separator />
-
-                    <div>
-                        <h3 className="text-lg font-semibold text-primary mb-4">
-                            Categorias Existentes
-                        </h3>
-                        <div className="space-y-2">
-                            {categories.length > 0 ? (
-                                [...categories].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')).map((cat) => (
-                                    <div
-                                        key={cat.id}
-                                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                                    >
-                                        <div className="flex flex-col gap-1">
-                                            <span className="font-medium text-foreground">
-                                                {cat.title.toUpperCase()}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                {cat.destinationType === 'group' ? (
-                                                    <><MessageCircle className="h-3 w-3" /> Destino: Grupo ({cat.groupName})</>
-                                                ) : (
-                                                    <><Users className="h-3 w-3" /> Destino: Atendentes ({cat.attendants?.length || 0})</>
-                                                )}
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => onEdit(cat)}
-                                            >
-                                                <Edit className="h-4 w-4 mr-2" /> Editar
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() => onDelete(cat.id)}
-                                                className="text-destructive hover:text-destructive"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-center text-muted-foreground py-4">
-                                    Nenhuma categoria criada ainda.
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end pt-4 border-t">
-                        <Button variant="outline" onClick={onClose}>
-                            Fechar
+                    <div className="flex justify-end pt-2">
+                        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto mt-4">
+                            Sair
                         </Button>
                     </div>
                 </div>
